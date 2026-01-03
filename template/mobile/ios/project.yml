@@ -1,0 +1,46 @@
+name: App
+
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+configs:
+  Debug: debug
+  Release: release
+
+configFiles:
+  Debug: Config/Development.xcconfig
+  Release: Config/Production.xcconfig
+
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  App:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        name: App
+        type: group
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.plist
+        PRODUCT_NAME: App
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+schemes:
+  App:
+    build:
+      targets:
+        App: all
+    run:
+      config: Debug
+    archive:
+      config: Release
