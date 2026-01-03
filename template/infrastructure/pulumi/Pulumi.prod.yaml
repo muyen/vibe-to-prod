@@ -1,0 +1,7 @@
+# Production environment configuration
+# Run: pulumi config set gcp:project YOUR_PROD_PROJECT_ID --stack prod
+
+config:
+  gcp:region: us-central1
+  app-infrastructure:environment: prod
+  app-infrastructure:appName: app
