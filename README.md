@@ -94,20 +94,26 @@ You can vibe code features in hours. But shipping to production? That's weeks of
 
 ### Deployment Environments
 
+Two fully isolated environments - separate GCP projects and Firebase projects:
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    TWO-ENVIRONMENT SETUP                     │
 │                                                              │
-│   ┌─────────────┐         ┌─────────────┐                   │
-│   │     DEV     │         │    PROD     │                   │
-│   │ api-dev.app │         │  api.app    │                   │
-│   └──────┬──────┘         └──────┬──────┘                   │
-│          │                       │                          │
-│          ▼                       ▼                          │
-│   ┌─────────────┐         ┌─────────────┐                   │
-│   │  Cloud Run  │         │  Cloud Run  │                   │
-│   │  (dev proj) │         │ (prod proj) │                   │
-│   └─────────────┘         └─────────────┘                   │
+│          DEVELOPMENT                    PRODUCTION           │
+│   ┌─────────────────────┐       ┌─────────────────────┐     │
+│   │  GCP Project (dev)  │       │  GCP Project (prod) │     │
+│   │  ┌───────────────┐  │       │  ┌───────────────┐  │     │
+│   │  │   Cloud Run   │  │       │  │   Cloud Run   │  │     │
+│   │  │   api-dev     │  │       │  │   api-prod    │  │     │
+│   │  └───────────────┘  │       │  └───────────────┘  │     │
+│   │  ┌───────────────┐  │       │  ┌───────────────┐  │     │
+│   │  │   Firebase    │  │       │  │   Firebase    │  │     │
+│   │  │  - Auth       │  │       │  │  - Auth       │  │     │
+│   │  │  - Firestore  │  │       │  │  - Firestore  │  │     │
+│   │  │  - Storage    │  │       │  │  - Storage    │  │     │
+│   │  └───────────────┘  │       │  └───────────────┘  │     │
+│   └─────────────────────┘       └─────────────────────┘     │
 │                                                              │
 │   Push to main ──▶ Auto-deploy to DEV                       │
 │   Manual promote ──▶ Same image to PROD                     │
@@ -115,12 +121,16 @@ You can vibe code features in hours. But shipping to production? That's weeks of
 └─────────────────────────────────────────────────────────────┘
 ```
 
-| Environment | Triggered By | Purpose |
-|-------------|--------------|---------|
-| **Development** | Push to `main` | Test changes, integration testing |
-| **Production** | Manual promotion | Live users, stable releases |
+| Environment | GCP Project | Firebase Project | Triggered By |
+|-------------|-------------|------------------|--------------|
+| **Development** | `yourapp-dev` | `yourapp-dev` | Push to `main` |
+| **Production** | `yourapp-prod` | `yourapp-prod` | Manual promotion |
 
-The same Docker image is promoted from dev to prod - no rebuild, ensuring parity.
+**Why separate projects?**
+- Isolated data (dev data never touches prod)
+- Separate billing and quotas
+- Different IAM permissions
+- Safe to experiment in dev
 
 ---
 
