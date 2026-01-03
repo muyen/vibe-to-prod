@@ -84,9 +84,56 @@ You can vibe code features in hours. But shipping to production? That's weeks of
 
 ---
 
-## AI-Native Development
+## Built for Claude Code
 
-This template is designed for Claude Code and AI-assisted development:
+This template is designed specifically for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - Anthropic's CLI for AI-assisted development.
+
+### Why Claude Code?
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     CLAUDE CODE + THIS TEMPLATE              │
+│                                                              │
+│   You ───▶ claude ───▶ Full codebase access                 │
+│                   │                                          │
+│                   ├───▶ Pre-configured rules & skills        │
+│                   │                                          │
+│                   ├───▶ MCP servers for extended context     │
+│                   │     • GitHub (PRs, issues, code search)  │
+│                   │     • Memory (persistent knowledge)      │
+│                   │     • Context7 (library docs)            │
+│                   │     • Notion (team knowledge)            │
+│                   │     • Pulumi (infrastructure)            │
+│                   │                                          │
+│                   └───▶ Hooks prevent mistakes automatically │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### MCP Servers (Model Context Protocol)
+
+MCP servers extend Claude's capabilities beyond the codebase:
+
+| MCP Server | What It Does | Why You Need It |
+|------------|--------------|-----------------|
+| **GitHub** | Create PRs, issues, search code | Ship without leaving the terminal |
+| **Memory** | Persistent knowledge graph | Remember decisions across sessions |
+| **Context7** | Latest library documentation | Always up-to-date API references |
+| **Notion** | Team knowledge base | Connect to your docs |
+| **Pulumi** | Infrastructure management | Deploy and manage cloud resources |
+
+See [AI_WORKFLOW.md](docs/AI_WORKFLOW.md) for full MCP setup instructions.
+
+### Pre-built AI Automation
+
+| Type | What | Examples |
+|------|------|----------|
+| **Commands** | One-command workflows | `/commit`, `/code-review`, `/security-scan` |
+| **Skills** | Auto-activate on context | `continuous-improvement`, `systematic-debugging` |
+| **Hooks** | Quality gates | Block edits to generated files, enforce commit format |
+| **Rules** | Platform-specific guidance | Backend, iOS, Android, Testing rules |
+
+### Continuous Improvement Loop
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -108,15 +155,6 @@ This template is designed for Claude Code and AI-assisted development:
 │                  Memory retains project knowledge           │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-### Pre-built AI Automation
-
-| Type | What | Examples |
-|------|------|----------|
-| **Commands** | One-command workflows | `/commit`, `/code-review`, `/security-scan` |
-| **Skills** | Auto-activate on context | `continuous-improvement`, `systematic-debugging` |
-| **Hooks** | Quality gates | Block edits to generated files, enforce commit format |
-| **Rules** | Platform-specific guidance | Backend, iOS, Android, Testing rules |
 
 ---
 
