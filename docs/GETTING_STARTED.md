@@ -14,9 +14,16 @@ Get your app running in production in under 30 minutes.
 
 This interactive script will:
 - Check prerequisites (gcloud, pulumi, go)
+- **Configure git hooks** (pre-commit, commit-msg, pre-push)
 - Configure your Google Cloud project
 - Enable required APIs
 - Set up Pulumi infrastructure stacks
+
+**Quick setup without GCP** (just git hooks and dependencies):
+```bash
+make setup-hooks     # Configure git hooks
+cd backend && make deps  # Install Go dependencies
+```
 
 ### 2. Deploy Infrastructure
 

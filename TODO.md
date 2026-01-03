@@ -25,9 +25,11 @@
 - [ ] **Load testing** - k6 setup
 
 ### Security
-- [ ] **Rate limiting** - Add to backend
-- [ ] **Security headers** - CORS, CSP, etc.
+- [x] **Security headers** - CORS, CSP, XSS, HSTS configured (matches proofmi)
+- [x] **Release checklist** - docs/RELEASE_CHECKLIST.md
 - [ ] **API key rotation** - Document process
+- [ ] **Rate limiting** - Configure at API Gateway level
+- [ ] **Request timeout** - Configure at API Gateway level
 
 ## Medium Priority
 
@@ -91,6 +93,8 @@
 - [x] Secrets documentation in .env.example
 - [x] Pre-commit hook blocks .env and secrets
 - [x] .gitignore covers sensitive files
+- [x] Security middleware in backend (headers, CORS - matches proofmi pattern)
+- [x] RELEASE_CHECKLIST.md - Pre-deployment verification guide
 
 ---
 
