@@ -5,12 +5,13 @@
 ## High Priority
 
 ### Automation (from proofmi)
-- [ ] **Review proofmi automation folder** - Port useful scripts
+- [x] **Review proofmi automation folder** - Ported useful generic scripts
 - [ ] **Agents configuration** - Custom agent prompts if any
-- [ ] **Pre-commit formatting** - Auto-format on commit (swiftformat, ktlint)
-- [ ] **Dependabot config** - Auto dependency updates
-- [ ] **GitHub PR template** - Consistent PR descriptions
-- [ ] **GitHub issue templates** - Bug report, feature request
+- [x] **Pre-commit formatting** - Auto-format on commit (Go formatting in pre-commit hook)
+- [x] **Dependabot config** - Auto dependency updates
+- [x] **GitHub PR template** - Consistent PR descriptions
+- [x] **GitHub issue templates** - Bug report, feature request
+- [x] **Workflow validation script** - Validates GitHub Actions workflows
 
 ### Testing
 - [ ] **iOS XCTest setup** - Add test target to project.yml
@@ -62,7 +63,11 @@
 - [x] Claude skills (continuous-improvement, systematic-debugging)
 - [x] Session hooks (session-start, session-end)
 - [x] Platform rules (backend, ios, android, testing)
+- [x] Dependabot config (.github/dependabot.yml)
+- [x] GitHub PR template (.github/PULL_REQUEST_TEMPLATE.md)
+- [x] GitHub issue templates (bug_report, feature_request)
+- [x] Workflow validation script (.github/scripts/validate-workflows.sh)
 
 ---
 
-**Last Updated**: 2026-01-02
+**Last Updated**: 2026-01-03
