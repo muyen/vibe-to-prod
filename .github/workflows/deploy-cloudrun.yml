@@ -23,7 +23,7 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     environment: ${{ github.event.inputs.environment || 'dev' }}
 
     permissions:
@@ -55,12 +55,14 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image ${{ env.IMAGE }} \
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="ENV=${{ github.event.inputs.environment || 'dev' }}"
+            --set-env-vars="ENV=${{ github.event.inputs.environment || 'dev' }}" \
+            --update-labels="git-sha=${SHORT_SHA},deployed-at=$(date +%Y%m%d-%H%M%S)"
 
       - name: Show Service URL
         run: |

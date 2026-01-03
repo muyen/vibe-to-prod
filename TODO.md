@@ -4,14 +4,19 @@
 
 ## High Priority
 
+### Bootstrap & Onboarding
+- [ ] **Fresh clone test** - Clone to new folder, test with fresh AI session
+- [ ] **Claude project configuration** - Verify MCP servers, tools, settings work
+
 ### Automation (from proofmi)
 - [x] **Review proofmi automation folder** - Ported useful generic scripts
-- [ ] **Agents configuration** - Custom agent prompts if any
 - [x] **Pre-commit formatting** - Auto-format on commit (Go formatting in pre-commit hook)
 - [x] **Dependabot config** - Auto dependency updates
 - [x] **GitHub PR template** - Consistent PR descriptions
 - [x] **GitHub issue templates** - Bug report, feature request
 - [x] **Workflow validation script** - Validates GitHub Actions workflows
+- [x] **Production promotion pipeline** - Deploy tested image from dev to prod
+- [x] **Local runner toggle script** - Switch between GitHub-hosted and self-hosted runners
 
 ### Testing
 - [ ] **iOS XCTest setup** - Add test target to project.yml
@@ -29,7 +34,6 @@
 ### Documentation
 - [ ] **API documentation** - Generate from OpenAPI
 - [ ] **Changelog automation** - From conventional commits
-- [ ] **Contributing guide** - Add CONTRIBUTING.md
 
 ### Mobile
 - [ ] **Force update mechanism** - For breaking API changes
@@ -51,7 +55,21 @@
 
 ## Completed
 
+### CI/CD
+- [x] Production promotion workflow (.github/workflows/prod-promotion.yml)
+- [x] Local runner toggle script (scripts/toggle-runner.sh)
+- [x] Runner toggle support in all workflows (RUNNER_LABEL variable)
+- [x] Fixed security.yml for private repos (removed CodeQL/SARIF)
+- [x] Deploy workflow with git-sha labels for traceability
+
+### Automation
 - [x] Git hooks (pre-commit, commit-msg, pre-push)
+- [x] Dependabot config (.github/dependabot.yml)
+- [x] GitHub PR template (.github/PULL_REQUEST_TEMPLATE.md)
+- [x] GitHub issue templates (bug_report, feature_request)
+- [x] Workflow validation script (.github/scripts/validate-workflows.sh)
+
+### Testing & Documentation
 - [x] Backend unit tests
 - [x] Backend integration tests
 - [x] Smoke test script
@@ -59,14 +77,20 @@
 - [x] TESTING.md
 - [x] SCALING.md
 - [x] AI_BOOTSTRAP.md
+- [x] CICD.md - Self-hosted runners & prod promotion docs
+- [x] CONTRIBUTING.md
+
+### Claude Configuration
 - [x] Claude commands (commit, code-review, security-scan, etc.)
 - [x] Claude skills (continuous-improvement, systematic-debugging)
 - [x] Session hooks (session-start, session-end)
 - [x] Platform rules (backend, ios, android, testing)
-- [x] Dependabot config (.github/dependabot.yml)
-- [x] GitHub PR template (.github/PULL_REQUEST_TEMPLATE.md)
-- [x] GitHub issue templates (bug_report, feature_request)
-- [x] Workflow validation script (.github/scripts/validate-workflows.sh)
+
+### Security
+- [x] Security audit passed - no hardcoded secrets or personal info
+- [x] Secrets documentation in .env.example
+- [x] Pre-commit hook blocks .env and secrets
+- [x] .gitignore covers sensitive files
 
 ---
 

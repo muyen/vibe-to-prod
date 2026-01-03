@@ -1,5 +1,8 @@
 # Security Scanning Workflow
 # Runs on every push and weekly
+#
+# NOTE: SARIF uploads require GitHub Advanced Security (paid for private repos)
+# This workflow uses console/table output instead for private repo compatibility
 
 name: Security Scan
 
@@ -16,7 +19,7 @@ jobs:
   # Go Security Scan
   go-security:
     name: Go Security
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,15 +29,9 @@ jobs:
           go-version: '1.21'
 
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: '-no-fail -fmt sarif -out results.sarif ./backend/...'
-
-      - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.sarif
-        if: always()
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          cd backend && gosec -fmt=text ./...
 
       - name: Run govulncheck
         run: |
@@ -44,42 +41,17 @@ jobs:
   # Dependency Review (for PRs)
   dependency-review:
     name: Dependency Review
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
 
-  # CodeQL Analysis
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: go
-
-      - name: Build
-        run: |
-          cd backend
-          go build -o /dev/null ./...
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-  # Secret Scanning (built into GitHub, this is a reminder)
-  # Enable in: Settings > Security > Code security and analysis > Secret scanning
-
   # Trivy Container Scan
   container-scan:
     name: Container Scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -92,11 +64,24 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'app:test'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
 
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
-        if: always()
+# NOTE: CodeQL removed - requires GitHub Advanced Security for private repos
+# To enable CodeQL, either:
+# 1. Make repo public, OR
+# 2. Enable GitHub Advanced Security (paid feature)
+# When enabled, add:
+#   codeql:
+#     name: CodeQL
+#     runs-on: ubuntu-latest
+#     permissions:
+#       security-events: write
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: github/codeql-action/init@v3
+#         with:
+#           languages: go
+#       - run: cd backend && go build -o /dev/null ./...
+#       - uses: github/codeql-action/analyze@v3

@@ -58,7 +58,8 @@ This document explains the GitHub Actions workflows included in this template.
 | `backend-ci.yml` | Push/PR on `backend/**` | Build, test, lint Go code |
 | `ios-ci.yml` | Push/PR on `mobile/ios/**` | Build, test iOS app |
 | `android-ci.yml` | Push/PR on `mobile/android/**` | Build, test Android app |
-| `deploy-cloudrun.yml` | Push to main, manual | Deploy backend to Cloud Run |
+| `deploy-cloudrun.yml` | Push to main, manual | Deploy backend to Cloud Run (dev) |
+| `prod-promotion.yml` | Manual only | Promote tested image to production |
 | `security.yml` | Push to main, weekly | Security scanning |
 
 ---
@@ -184,26 +185,27 @@ steps:
 
 ### Scans Included
 
-| Tool | What It Checks |
-|------|----------------|
-| **gosec** | Go security issues (SQL injection, crypto, etc.) |
-| **govulncheck** | Known vulnerabilities in Go dependencies |
-| **CodeQL** | Semantic code analysis |
-| **Trivy** | Container image vulnerabilities |
-| **Dependency Review** | PR dependency changes |
+| Tool | What It Checks | Output |
+|------|----------------|--------|
+| **gosec** | Go security issues (SQL injection, crypto, etc.) | Console |
+| **govulncheck** | Known vulnerabilities in Go dependencies | Console |
+| **Trivy** | Container image vulnerabilities | Table (fails on CRITICAL/HIGH) |
+| **Dependency Review** | PR dependency changes | PR comments |
 
-### SARIF Integration
+### Private Repo Compatibility
 
-Results upload to GitHub Security tab:
+This workflow is optimized for **private repositories**:
+- Uses console/table output instead of SARIF uploads
+- CodeQL removed (requires GitHub Advanced Security for private repos)
+- No GitHub Security tab integration needed
 
-```yaml
-- name: Upload SARIF file
-  uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: results.sarif
-```
+### Enabling CodeQL (Public Repos or Enterprise)
 
-View results in: **Repository → Security → Code scanning alerts**
+If you have GitHub Advanced Security or a public repo, enable CodeQL:
+
+1. Uncomment the CodeQL job in `.github/workflows/security.yml`
+2. Enable "Code scanning" in repository settings
+3. View results in **Repository → Security → Code scanning alerts**
 
 ---
 
@@ -275,6 +277,165 @@ gh workflow run deploy-cloudrun.yml -f environment=dev
 # Check workflow status
 gh run list
 ```
+
+---
+
+## Production Promotion (`prod-promotion.yml`)
+
+**Trigger:** Manual only (workflow_dispatch)
+
+**Pattern:** Build once, deploy anywhere. The same Docker image tested in dev is promoted to production.
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Backend CI    │    │  Dev Deployment │    │ Prod Promotion  │
+│  (build & test) │───▶│  (test in dev)  │───▶│ (same image!)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │                       │
+                              ▼                       ▼
+                       Image: abc1234           Image: abc1234
+                       (Artifact Registry)      (Same image)
+```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **SHA Resolution** | Auto-fetches latest SHA from dev if not provided |
+| **Image Validation** | Verifies image exists before promoting |
+| **Health Checks** | 5 retries with 15s intervals post-deploy |
+| **Failure Notifications** | Creates GitHub issue on failure with rollback instructions |
+| **Git Labels** | Tags Cloud Run revision with git-sha for traceability |
+
+### Usage
+
+```bash
+# Promote latest dev image
+gh workflow run prod-promotion.yml
+
+# Promote specific SHA
+gh workflow run prod-promotion.yml -f image_sha=abc1234
+
+# Use self-hosted runner
+gh workflow run prod-promotion.yml -f runner=self-hosted
+```
+
+### Required Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `WIF_PROVIDER_DEV` | Workload Identity Provider for dev project |
+| `WIF_SERVICE_ACCOUNT_DEV` | Service account for dev project |
+| `WIF_PROVIDER_PROD` | Workload Identity Provider for prod project |
+| `WIF_SERVICE_ACCOUNT_PROD` | Service account for prod project |
+
+### GitHub Environments
+
+Configure approval gates in **Settings → Environments → production**:
+- Required reviewers
+- Wait timer
+- Deployment branches (main only)
+
+---
+
+## Self-Hosted Runners
+
+GitHub provides 2000 free minutes/month for private repos. This can run out quickly with active development.
+
+### Why Use Self-Hosted Runners?
+
+| Scenario | GitHub-Hosted | Self-Hosted |
+|----------|--------------|-------------|
+| **Cost** | 2000 min/mo free | Unlimited |
+| **Speed** | Queue wait time | Immediate |
+| **Resources** | Limited | Your hardware |
+| **Privacy** | Code processed on GitHub | Code stays local |
+
+### Quick Math
+
+```
+Backend CI: ~5 min per run
+Security scan: ~8 min per run
+Full deployment: ~15 min per run
+─────────────────────────────────
+10 pushes/day × 28 min = 280 min/day
+280 min × 7 days = 1960 min (almost quota!)
+```
+
+### Toggle Script
+
+Use the toggle script to switch between runners:
+
+```bash
+# Check current setting
+./scripts/toggle-runner.sh status
+
+# When GitHub quota runs low
+./scripts/toggle-runner.sh local
+
+# When quota resets (monthly)
+./scripts/toggle-runner.sh github
+```
+
+### Setting Up a Self-Hosted Runner
+
+#### Option 1: Local Machine
+
+```bash
+# 1. Go to: Settings → Actions → Runners → New self-hosted runner
+# 2. Follow download instructions for your OS
+# 3. Configure:
+./config.sh --url https://github.com/YOUR_ORG/YOUR_REPO --token TOKEN
+
+# 4. Run interactively:
+./run.sh
+
+# Or install as service (macOS):
+./svc.sh install
+./svc.sh start
+```
+
+#### Option 2: Cheap VPS ($5-10/month)
+
+```bash
+# On a DigitalOcean/Linode/Vultr VPS
+# 1. Create Ubuntu 22.04 VM
+# 2. Install Docker
+# 3. Follow GitHub runner setup
+# 4. Run as systemd service
+
+# Create service file
+sudo tee /etc/systemd/system/github-runner.service <<EOF
+[Unit]
+Description=GitHub Actions Runner
+After=network.target
+
+[Service]
+Type=simple
+User=runner
+WorkingDirectory=/home/runner/actions-runner
+ExecStart=/home/runner/actions-runner/run.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable github-runner
+sudo systemctl start github-runner
+```
+
+### All Workflows Support Runner Toggle
+
+Every workflow uses this pattern:
+
+```yaml
+jobs:
+  build:
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+```
+
+The `RUNNER_LABEL` repository variable controls all workflows at once.
 
 ---
 

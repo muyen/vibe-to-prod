@@ -1,0 +1,244 @@
+# Production Promotion Workflow
+#
+# Deploy tested image from dev to production
+# SAME IMAGE - no rebuild! Deploy the exact image tested in dev
+#
+# Pattern: Build once, deploy anywhere
+# - Dev deployment creates and tests the image
+# - Prod promotion deploys the SAME tested image
+#
+# CUSTOMIZE: Replace all {PLACEHOLDER} values with your project specifics
+
+name: Production Promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use'
+        required: true
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+        - ubuntu-latest
+        - self-hosted
+      image_sha:
+        description: 'Git SHA to promote (leave empty to auto-fetch latest from dev)'
+        required: false
+        type: string
+        default: ''
+
+env:
+  # CUSTOMIZE: Your GCP project IDs
+  PROJECT_ID_DEV: your-project-dev
+  PROJECT_ID_PROD: your-project-prod
+  REGION: us-central1
+  SERVICE_NAME: backend
+  # CUSTOMIZE: Your Docker registry (Artifact Registry recommended)
+  DOCKER_REGISTRY: us-central1-docker.pkg.dev
+
+jobs:
+  validate:
+    name: Validate & Resolve SHA
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    outputs:
+      image_sha: ${{ steps.resolve-sha.outputs.sha }}
+
+    steps:
+      - name: Authenticate to Google Cloud (Dev)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER_DEV }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT_DEV }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Resolve SHA (auto-fetch from dev if not provided)
+        id: resolve-sha
+        run: |
+          INPUT_SHA="${{ github.event.inputs.image_sha }}"
+
+          if [ -z "$INPUT_SHA" ]; then
+            echo "No SHA provided, fetching latest from dev..."
+            SHA=$(gcloud run services describe ${{ env.SERVICE_NAME }}-dev \
+              --project=${{ env.PROJECT_ID_DEV }} \
+              --region=${{ env.REGION }} \
+              --format='value(spec.template.metadata.labels.git-sha)')
+            echo "Auto-resolved SHA from dev: $SHA"
+          else
+            SHA="$INPUT_SHA"
+            echo "Using provided SHA: $SHA"
+          fi
+
+          # Validate SHA format (7 hex characters)
+          if [[ ! "$SHA" =~ ^[a-f0-9]{7}$ ]]; then
+            echo "Invalid SHA format. Must be 7 hex characters (e.g., a1b2c3d)"
+            exit 1
+          fi
+
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+
+      - name: Check image exists
+        run: |
+          IMAGE="${{ env.DOCKER_REGISTRY }}/${{ env.PROJECT_ID_DEV }}/images/${{ env.SERVICE_NAME }}:${{ steps.resolve-sha.outputs.sha }}"
+          echo "Checking for image: $IMAGE"
+
+          if gcloud artifacts docker images describe "$IMAGE" > /dev/null 2>&1; then
+            echo "Image found!"
+          else
+            echo "Image not found: $IMAGE"
+            exit 1
+          fi
+
+  promote:
+    name: Deploy to Production
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: validate
+    environment: production  # Requires approval if configured in GitHub
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (Prod)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER_PROD }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT_PROD }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Production Cloud Run
+        run: |
+          # Deploy the SAME image tested in dev
+          IMAGE="${{ env.DOCKER_REGISTRY }}/${{ env.PROJECT_ID_DEV }}/images/${{ env.SERVICE_NAME }}:${{ needs.validate.outputs.image_sha }}"
+
+          echo "Deploying to production..."
+          echo "Image: $IMAGE"
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image "$IMAGE" \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID_PROD }} \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 1Gi \
+            --cpu 1 \
+            --max-instances 10 \
+            --min-instances 0 \
+            --concurrency 80 \
+            --timeout 60 \
+            --set-env-vars "ENV=production" \
+            --update-labels "git-sha=${{ needs.validate.outputs.image_sha }},deployed-at=$(date +%Y%m%d-%H%M%S)"
+
+          echo "Deployed to production!"
+
+  verify:
+    name: Verify Deployment
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: [validate, promote]
+    outputs:
+      service_url: ${{ steps.get-url.outputs.url }}
+
+    steps:
+      - name: Authenticate to Google Cloud (Prod)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER_PROD }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT_PROD }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get service URL
+        id: get-url
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID_PROD }} \
+            --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Service URL: $URL"
+
+      - name: Health check
+        run: |
+          URL="${{ steps.get-url.outputs.url }}"
+          echo "Running health check..."
+
+          for i in {1..5}; do
+            if curl -sf "$URL/health" > /dev/null 2>&1 || curl -sf "$URL/api/v1/health" > /dev/null 2>&1; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 15s..."
+            sleep 15
+          done
+
+          echo "Health check failed after 5 attempts"
+          exit 1
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "Production Deployment Complete!"
+          echo "================================"
+          echo ""
+          echo "Deployment Info:"
+          echo "  Git SHA: ${{ needs.validate.outputs.image_sha }}"
+          echo "  Service URL: ${{ steps.get-url.outputs.url }}"
+          echo ""
+          echo "To verify deployed version:"
+          echo "  gcloud run services describe ${{ env.SERVICE_NAME }} --project=${{ env.PROJECT_ID_PROD }} --format='value(spec.template.metadata.labels)'"
+
+      - name: Write job summary
+        run: |
+          echo "## Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Git SHA | \`${{ needs.validate.outputs.image_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service URL | ${{ steps.get-url.outputs.url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | ${{ env.REGION }} |" >> $GITHUB_STEP_SUMMARY
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: [validate, promote, verify]
+    if: failure()
+
+    steps:
+      - name: Create GitHub Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Production Deployment Failed - SHA ${{ needs.validate.outputs.image_sha }}`,
+              body: `## Production Deployment Failed
+
+              **Git SHA:** \`${{ needs.validate.outputs.image_sha }}\`
+              **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+              ### Action Required
+              1. Review workflow logs
+              2. Check production logs: \`gcloud run services logs read ${{ env.SERVICE_NAME }} --project=${{ env.PROJECT_ID_PROD }}\`
+              3. Consider rollback if needed
+
+              ### Rollback Instructions
+              \`\`\`bash
+              # List recent revisions
+              gcloud run revisions list --service=${{ env.SERVICE_NAME }} --project=${{ env.PROJECT_ID_PROD }}
+
+              # Rollback to previous revision
+              gcloud run services update-traffic ${{ env.SERVICE_NAME }} \\
+                --to-revisions=<PREVIOUS_REVISION>=100 \\
+                --project=${{ env.PROJECT_ID_PROD }}
+              \`\`\`
+              `,
+              labels: ['production', 'deployment', 'failure']
+            });
+            console.log(`Created issue #${issue.data.number}`);
