@@ -15,36 +15,38 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/session-start.sh",
-            "timeout": 30
-          }
-        ]
+        "type": "command",
+        "command": "bash .claude/hooks/session-start.sh",
+        "timeout": 10
       }
     ],
     "SessionEnd": [
       {
-        "matcher": "*",
+        "type": "command",
+        "command": "bash .claude/hooks/session-end.sh",
+        "timeout": 10
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/session-end.sh",
-            "timeout": 30
+            "command": "bash .claude/hooks/protect-generated-files.sh \"$CLAUDE_TOOL_INPUT_FILE_PATH\"",
+            "timeout": 5
           }
         ]
       }
     ],
-    "PreCompact": [
+    "PostToolUse": [
       {
-        "matcher": "*",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/pre-compact.sh",
-            "timeout": 10
+            "command": "bash .claude/hooks/openapi-changed.sh \"$CLAUDE_TOOL_INPUT_FILE_PATH\"",
+            "timeout": 5
           }
         ]
       }
@@ -55,6 +57,6 @@
   },
   "sandbox": {
     "enabled": true,
-    "excludedCommands": ["docker", "git push", "gumroad", "stripe"]
+    "excludedCommands": ["docker", "git push"]
   }
 }

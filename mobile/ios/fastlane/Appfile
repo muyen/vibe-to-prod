@@ -1,0 +1,14 @@
+# App Store Connect configuration
+# Replace with your values
+
+# Apple Developer Portal Team ID
+# team_id("YOUR_TEAM_ID")
+
+# App Store Connect App ID
+# app_identifier("com.yourcompany.app")
+
+# Apple ID email
+# apple_id("your-email@example.com")
+
+# App Store Connect Team ID (if different from dev team)
+# itc_team_id("YOUR_ITC_TEAM_ID")

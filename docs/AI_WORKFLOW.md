@@ -1,0 +1,458 @@
+# AI Workflow Guide
+
+How to get the most out of AI-assisted development with this template.
+
+---
+
+## Claude Code Setup
+
+This template is optimized for [Claude Code](https://claude.com/claude-code).
+
+### Install
+
+```bash
+npm install -g @anthropic-ai/claude-code
+claude login
+```
+
+### Start a Session
+
+```bash
+cd your-project
+claude
+```
+
+---
+
+## What's Included
+
+### Commands (`.claude/commands/`)
+
+| Command | Purpose |
+|---------|---------|
+| `/commit` | Create conventional commits |
+| `/code-review` | Review code for issues |
+| `/generate-tests` | Create test suite |
+| `/refactor-code` | Safe refactoring |
+| `/openspec:proposal` | Plan a significant change |
+| `/openspec:apply` | Implement approved change |
+| `/openspec:archive` | Archive completed change |
+
+### Skills (`.claude/skills/`)
+
+Skills auto-activate based on context:
+
+| Skill | Triggers When |
+|-------|---------------|
+| `systematic-debugging` | Bugs reported, errors seen, tests failing |
+| `git-workflow` | Creating branches, preparing PRs |
+
+### Hooks (`.claude/hooks/`)
+
+| Hook | Purpose |
+|------|---------|
+| `protect-generated-files.sh` | Prevents editing generated files |
+| `openapi-changed.sh` | Reminds to regenerate after API changes |
+
+### Permissions (`.claude/settings.json`)
+
+Protected by default:
+- `.env` files (secrets)
+- `*.pem`, `*.key` files (certificates)
+- `secrets/` directories
+
+---
+
+## MCP Servers (Recommended)
+
+MCP (Model Context Protocol) servers extend Claude's capabilities. These are highly recommended for production development:
+
+### Essential MCPs
+
+#### 1. GitHub MCP
+Connect Claude to your GitHub repos.
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<your-token>"
+      }
+    }
+  }
+}
+```
+
+**Enables:**
+- Create/read issues and PRs
+- Search code across repos
+- Review PR changes
+
+#### 2. Linear MCP (Highly Recommended)
+Track tasks across AI sessions.
+
+```json
+{
+  "mcpServers": {
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "@linear/mcp-server"],
+      "env": {
+        "LINEAR_API_KEY": "<your-api-key>"
+      }
+    }
+  }
+}
+```
+
+**Enables:**
+- Create/update issues
+- Track progress across sessions
+- Link commits to issues
+- **Critical for multi-session work**
+
+#### 3. Memory MCP
+Persistent memory across sessions.
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+```
+
+**Enables:**
+- Remember project context
+- Track decisions made
+- Maintain knowledge graph
+
+#### 4. Context7 MCP
+Up-to-date library documentation.
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp-server"]
+    }
+  }
+}
+```
+
+**Enables:**
+- Latest docs for any library
+- Code examples
+- API references
+
+#### 5. Notion MCP (Optional)
+Connect to your Notion workspace.
+
+```json
+{
+  "mcpServers": {
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/mcp-server"],
+      "env": {
+        "NOTION_API_KEY": "<your-integration-token>"
+      }
+    }
+  }
+}
+```
+
+**Enables:**
+- Search Notion pages
+- Create/update documentation
+- Sync with team knowledge base
+
+### Full MCP Configuration
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<token>"
+      }
+    },
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "@linear/mcp-server"],
+      "env": {
+        "LINEAR_API_KEY": "<key>"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp-server"]
+    }
+  }
+}
+```
+
+---
+
+## Why Linear MCP is Critical
+
+When you work across multiple AI sessions:
+
+**Without Linear:**
+- Each session starts fresh
+- Context is lost
+- You repeat yourself
+- Progress isn't tracked
+
+**With Linear:**
+- Create issues for tasks
+- Claude updates issue status
+- Next session picks up where you left off
+- Full history of what was done
+
+**Example workflow:**
+
+```
+Session 1:
+You: "Add user authentication"
+Claude: *creates Linear issue AUTH-1*
+Claude: *implements half the feature*
+Claude: *updates issue: "In Progress - JWT setup complete, need OAuth"*
+
+Session 2:
+You: "Continue working on auth"
+Claude: *reads Linear issue AUTH-1*
+Claude: "I see we completed JWT setup. Continuing with OAuth..."
+```
+
+---
+
+## Best Practices
+
+### 1. Use Commands for Repetitive Tasks
+
+```
+/commit              # Instead of manually writing commit messages
+/code-review file.go # Before submitting PRs
+/generate-tests      # After writing new code
+```
+
+### 2. Let Skills Activate
+
+Don't fight the skills. When debugging:
+- Describe the bug
+- Let `systematic-debugging` skill guide the process
+- Follow the 4-phase approach
+
+### 3. Use OpenSpec for Big Changes
+
+For anything that touches multiple files or takes multiple sessions:
+
+```
+/openspec:proposal   # Plan first
+# Get approval
+/openspec:apply      # Then implement
+/openspec:archive    # When deployed
+```
+
+### 4. Trust the Hooks
+
+The hooks prevent common mistakes:
+- Editing generated files (regenerate instead)
+- Forgetting to update clients after API changes
+
+### 5. Connect Your MCPs
+
+The more context Claude has, the better:
+- GitHub: sees your codebase
+- Linear: tracks your tasks
+- Memory: remembers your decisions
+
+---
+
+## Troubleshooting
+
+### "Command not found"
+
+```bash
+# Check commands exist
+ls .claude/commands/
+
+# Reload Claude
+claude
+```
+
+### "Hook not running"
+
+Check `.claude/settings.json` is valid JSON:
+
+```bash
+cat .claude/settings.json | jq .
+```
+
+### "MCP not connecting"
+
+```bash
+# Check MCP server runs manually
+npx -y @modelcontextprotocol/server-github
+
+# Check your tokens are set
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
+```
+
+---
+
+## Adding Custom Commands
+
+Create a new file in `.claude/commands/`:
+
+```markdown
+# .claude/commands/my-command.md
+
+# My Custom Command
+
+## Purpose
+What this command does.
+
+## Steps
+1. First step
+2. Second step
+
+## Output
+What to produce.
+```
+
+Then use: `/my-command`
+
+---
+
+## Adding Custom Skills
+
+Create a new folder in `.claude/skills/`:
+
+```markdown
+# .claude/skills/my-skill/SKILL.md
+
+# My Custom Skill
+
+## Activation
+When to activate this skill.
+
+## Behavior
+How to behave when active.
+
+## Steps
+1. First step
+2. Second step
+```
+
+---
+
+## Continuous Improvement (Built-In)
+
+One of the most powerful patterns in this template: **every mistake becomes a lesson**.
+
+### The Improvement Loop
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    SDLC with Improvement                   │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Intake → Explore → Plan → Code → Test → Deploy → IMPROVE  │
+│                                                    ↓        │
+│                                           ┌────────────────┐│
+│                                           │ What worked?   ││
+│                                           │ What was hard? ││
+│                                           │ What's missing?││
+│                                           └────────┬───────┘│
+│                                                    ↓        │
+│           ┌──────────────────────────────────────────┐     │
+│           │ Repeated mistake → Update .claude/rules/ │     │
+│           │ Complex process → Create .claude/skills/ │     │
+│           │ New pattern    → Store in Memory MCP     │     │
+│           │ Missing tool   → Create Linear issue     │     │
+│           └──────────────────────────────────────────┘     │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
+### How It Works
+
+After completing a task, briefly reflect:
+
+| Learning Type | Action |
+|---------------|--------|
+| Same mistake twice | Add rule to `.claude/rules/` |
+| Manual process > 5 min | Create skill in `.claude/skills/` |
+| New pattern discovered | Store in Memory MCP |
+| Missing automation | Create issue to fix later |
+
+### Example: Capturing a Learning
+
+```
+You made the same mistake twice (forgot to regenerate API client).
+
+Instead of just fixing it again:
+1. Add to .claude/rules/backend.md:
+   "After editing openapi.yaml, ALWAYS run `make generate`"
+2. Claude now reminds you automatically
+```
+
+### Memory MCP for Persistent Knowledge
+
+```javascript
+// When you learn something important
+mcp__memory__create_entities({
+  entities: [{
+    name: "Learning_FirestoreTransactions",
+    entityType: "development_learning",
+    observations: [
+      "Context: Was getting transaction errors",
+      "Learning: Reads MUST come before writes in Firestore transactions",
+      "Application: Always order tx.Get() before tx.Set()"
+    ]
+  }]
+})
+```
+
+### `/improve-claude-config` Command
+
+Periodically run this command to:
+- Audit your Claude configuration
+- Check for outdated rules
+- Identify missing skills
+- Ensure best practices
+
+### Why This Matters
+
+Traditional development: You make mistakes, fix them, move on.
+
+AI-assisted development: You make mistakes, **Claude learns from them**, and helps you avoid them forever.
+
+**The configuration improves over time.** After a few months:
+- Rules catch common mistakes before they happen
+- Skills automate repetitive processes
+- Memory contains project-specific knowledge
+- Hooks enforce quality gates
+
+This is the difference between "using AI" and "building an AI-assisted workflow."
+
+---
+
+*AI-assisted development is a skill. These tools help you develop it.*

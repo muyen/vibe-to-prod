@@ -1,67 +1,82 @@
 ---
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read, Bash, Grep
+argument-hint: [file-path or PR-number]
 description: Comprehensive code quality review with security, performance, and architecture analysis
-argument-hint: [file or directory to review]
-model: sonnet
 ---
 
 # Code Review
 
-Review code quality for: $ARGUMENTS
+Review: $ARGUMENTS
 
-## Current Changes
+## Review Checklist
 
-- Modified files: !`git diff --name-only HEAD~1 2>/dev/null || git diff --name-only`
+### 1. Correctness
+- [ ] Logic is correct
+- [ ] Edge cases handled
+- [ ] Error handling appropriate
+- [ ] No obvious bugs
 
-## Review Dimensions
-
-### 1. Security (Critical)
-- [ ] No hardcoded secrets or credentials
-- [ ] Input validation on all user inputs
-- [ ] SQL injection / NoSQL injection prevention
-- [ ] XSS prevention in any output
-- [ ] Auth checks on protected endpoints
-
-### 2. Code Quality
-- [ ] Single responsibility principle
-- [ ] Proper error handling
-- [ ] Appropriate logging
-- [ ] Testable design
-- [ ] No code duplication
+### 2. Security
+- [ ] No hardcoded secrets
+- [ ] Input validation present
+- [ ] No SQL/command injection
+- [ ] Auth/authz checks in place
 
 ### 3. Performance
 - [ ] No N+1 queries
 - [ ] Appropriate caching
-- [ ] Reasonable data sizes
-- [ ] No unnecessary computation
+- [ ] No memory leaks
+- [ ] Efficient algorithms
 
-### 4. Maintainability
-- [ ] Clear naming conventions
-- [ ] Reasonable function/file sizes
-- [ ] Documentation for complex logic
+### 4. Architecture
 - [ ] Follows project patterns
+- [ ] Proper separation of concerns
+- [ ] Dependencies injected correctly
+- [ ] No circular dependencies
+
+### 5. Readability
+- [ ] Clear naming
+- [ ] Functions not too long
+- [ ] Complex logic commented
+- [ ] Consistent style
+
+### 6. Testing
+- [ ] Tests exist for new code
+- [ ] Edge cases tested
+- [ ] Tests are meaningful
 
 ## Process
 
-1. Read the files to review
-2. Check against each dimension
-3. Identify issues by severity
-4. Provide actionable feedback
+1. Read the code thoroughly
+2. Check against each category
+3. Note issues with file:line references
+4. Suggest improvements
+5. Highlight good practices
 
 ## Output Format
 
-```markdown
-## Code Review Summary
+```
+## Code Review: [file/PR]
 
-### Critical Issues
-- [Blocking issues that must be fixed]
+### Summary
+[Brief overview of the code]
 
-### Warnings
-- [Non-blocking but should address]
+### Issues Found
 
-### Suggestions
-- [Optional improvements]
+#### Critical
+- [file:line] Issue description
 
-### Good Practices Observed
-- [What was done well]
+#### Warnings
+- [file:line] Issue description
+
+#### Suggestions
+- [file:line] Suggestion
+
+### Good Practices
+- [What's done well]
+
+### Verdict
+[ ] Approved
+[ ] Approved with suggestions
+[ ] Changes requested
 ```

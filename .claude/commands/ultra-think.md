@@ -1,11 +1,15 @@
 ---
 description: Deep analysis and problem solving with multi-dimensional thinking
-argument-hint: [problem or question to analyze]
+model: sonnet
 ---
 
-# Deep Analysis and Problem Solving Mode
+# Ultra Think Mode
 
-Deep analysis and problem solving mode
+Deep analysis and problem solving mode for complex decisions.
+
+**Problem/Question**: $ARGUMENTS
+
+---
 
 ## Instructions
 
@@ -14,26 +18,19 @@ Deep analysis and problem solving mode
    - Set context for deep, systematic reasoning
    - Prepare to explore the problem space comprehensively
 
-2. **Parse the Problem or Question**
-   - Extract the core challenge from: $ARGUMENTS
+2. **Parse the Problem**
+   - Extract the core challenge
    - Identify all stakeholders and constraints
-   - Recognize implicit requirements and hidden complexities
+   - Recognize implicit requirements
    - Question assumptions and surface unknowns
 
 3. **Multi-Dimensional Analysis**
-   Approach the problem from multiple angles:
 
    ### Technical Perspective
    - Analyze technical feasibility and constraints
-   - Consider scalability, performance, and maintainability
+   - Consider scalability, performance, maintainability
    - Evaluate security implications
    - Assess technical debt and future-proofing
-
-   ### Business Perspective
-   - Understand business value and ROI
-   - Consider time-to-market pressures
-   - Evaluate competitive advantages
-   - Assess risk vs. reward trade-offs
 
    ### User Perspective
    - Analyze user needs and pain points
@@ -54,7 +51,6 @@ Deep analysis and problem solving mode
      - Implementation complexity
      - Resource requirements
      - Potential risks
-     - Long-term implications
    - Include both conventional and creative solutions
    - Consider hybrid approaches
 
@@ -65,34 +61,53 @@ Deep analysis and problem solving mode
    - Present a nuanced view of the problem space
 
 6. **Provide Structured Recommendations**
-   Present findings in a clear structure:
-   ```
-   ## Problem Analysis
-   - Core challenge
-   - Key constraints
-   - Critical success factors
 
-   ## Solution Options
-   ### Option 1: [Name]
-   - Description
-   - Pros/Cons
-   - Implementation approach
+```
+## Problem Analysis
+- Core challenge
+- Key constraints
+- Critical success factors
 
-   ## Recommendation
-   - Recommended approach
-   - Rationale
-   - Next steps
-   ```
+## Solution Options
+
+### Option 1: [Name]
+- Description
+- Pros/Cons
+- Implementation approach
+
+### Option 2: [Name]
+...
+
+## Recommendation
+- Recommended approach
+- Rationale
+- Next steps
+```
+
+---
 
 ## Usage Examples
 
 ```bash
-# Product decision
+# Architecture decision
+/ultra-think Should we use microservices or monolith?
+
+# Feature prioritization
 /ultra-think Should we add feature X or focus on polish?
 
-# Pricing strategy
-/ultra-think What price point maximizes revenue while filtering for serious buyers?
-
 # Technical choice
-/ultra-think Should we include OpenAPI workflow or keep it simpler?
+/ultra-think REST vs GraphQL for our API?
+
+# Problem solving
+/ultra-think Why is the app slow on Android?
 ```
+
+---
+
+## When to Use
+
+- Complex architectural decisions
+- Trade-off analysis
+- Debugging difficult issues
+- Planning major features
+- Evaluating multiple options
