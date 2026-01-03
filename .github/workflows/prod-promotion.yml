@@ -52,7 +52,7 @@ jobs:
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT_DEV }}
 
       - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Resolve SHA (auto-fetch from dev if not provided)
         id: resolve-sha
@@ -108,7 +108,7 @@ jobs:
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT_PROD }}
 
       - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Deploy to Production Cloud Run
         run: |
@@ -150,7 +150,7 @@ jobs:
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT_PROD }}
 
       - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Get service URL
         id: get-url
