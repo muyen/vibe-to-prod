@@ -1,5 +1,7 @@
 # Getting Started
 
+> **For Human Developers** - If you're an AI assistant, read [AI_BOOTSTRAP.md](AI_BOOTSTRAP.md) instead.
+
 Get your app running in production in under 30 minutes.
 
 ---
@@ -68,7 +70,7 @@ open App.xcodeproj
 |------|---------|--------|
 | **gcloud** | [Install Guide](https://cloud.google.com/sdk/docs/install) | `gcloud version` |
 | **Pulumi** | `brew install pulumi` | `pulumi version` |
-| **Go 1.21+** | `brew install go` | `go version` |
+| **Go 1.24+** | `brew install go` | `go version` |
 | **Node.js** | `brew install node` | `node --version` |
 | **Firebase CLI** | `npm install -g firebase-tools` | `firebase --version` |
 
