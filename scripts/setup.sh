@@ -93,6 +93,24 @@ echo ""
 print_success "All prerequisites installed!"
 
 # =============================================================================
+# Configure Git Hooks
+# =============================================================================
+
+print_header "Git Hooks Setup"
+
+cd "$(dirname "$0")/.." || exit 1
+
+if [ -d ".githooks" ]; then
+    git config core.hooksPath .githooks
+    print_success "Git hooks configured (.githooks)"
+    echo "  - pre-commit: Format Go code, block secrets"
+    echo "  - commit-msg: Enforce conventional commits"
+    echo "  - pre-push: Run tests before push"
+else
+    print_warning "No .githooks directory found"
+fi
+
+# =============================================================================
 # Get Google Cloud Project
 # =============================================================================
 

@@ -68,8 +68,9 @@
 | HTTPS everywhere | Data in transit | ✅ Cloud Run default |
 | Auth on endpoints | Unauthorized access | ✅ Middleware pattern |
 | Input validation | Injection attacks | ✅ Handler examples |
-| Security headers | XSS, clickjacking | 🚧 Needs config |
-| Rate limiting | DoS protection | 🚧 Needs config |
+| Security headers | XSS, clickjacking | ✅ Configured in main.go |
+| Rate limiting | DoS protection | ⚙️ Configure at API Gateway |
+| Request timeout | Hanging connections | ⚙️ Configure at API Gateway |
 
 **The Gap**: Working code ≠ secure code. Security is a layer, not a feature.
 
@@ -177,7 +178,7 @@
 │  ─────────────────────────────────────────────────────────────────────  │
 │  Environments         ○               ●                 ●              │
 │  Testing              ○               ◐                 ●              │
-│  Security             ○               ◐                 ●              │
+│  Security             ○               ●                 ●              │
 │  CI/CD                ○               ●                 ●              │
 │  Infrastructure       ○               ●                 ●              │
 │  Monitoring           ○               ◐                 ●              │
@@ -196,14 +197,14 @@
 
 **Solid foundation (●):**
 - Multi-environment setup
-- CI/CD pipelines
+- CI/CD pipelines with production promotion
 - Infrastructure as code
-- Basic security scanning
+- Security scanning (gosec, govulncheck, Trivy)
+- Security middleware (headers, CORS - matches proofmi pattern)
 - Structured logging
 
 **Good start (◐):**
 - Testing framework (needs more tests)
-- Security (needs hardening)
 - Monitoring (needs alerting)
 - Mobile (needs polish)
 
@@ -237,4 +238,12 @@ This checklist is incomplete. If you've shipped to production and learned someth
 
 ---
 
-**Last Updated**: 2026-01-02
+## Related Documentation
+
+- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) - Pre-deployment verification checklist
+- [CICD.md](CICD.md) - CI/CD pipeline and production promotion
+- [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md) - Initial project setup
+
+---
+
+**Last Updated**: 2026-01-03

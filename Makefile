@@ -73,6 +73,14 @@ setup: ## Full project setup
 	@echo "Running setup script..."
 	./scripts/setup.sh
 
+setup-hooks: ## Configure git hooks only (quick setup)
+	@echo "Configuring git hooks..."
+	@git config core.hooksPath .githooks
+	@echo "Git hooks configured:"
+	@echo "  - pre-commit: Format Go code, block secrets"
+	@echo "  - commit-msg: Enforce conventional commits"
+	@echo "  - pre-push: Run tests before push"
+
 setup-backend: ## Setup backend dependencies
 	cd $(BACKEND_DIR) && make deps
 
