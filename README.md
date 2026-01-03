@@ -178,6 +178,16 @@ cd infrastructure/pulumi && make deploy-dev
 
 See [GETTING_STARTED.md](docs/GETTING_STARTED.md) for full setup instructions.
 
+### For AI Assistants
+
+If you're an AI assistant (Claude, etc.) working on this project for the first time:
+
+```
+Read docs/AI_BOOTSTRAP.md first
+```
+
+This contains project structure, key rules, source vs generated files, and common workflows optimized for AI context.
+
 ---
 
 ## Production Readiness
