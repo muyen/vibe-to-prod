@@ -1,0 +1,58 @@
+# Notification System for CI/CD Events
+# Configure SLACK_WEBHOOK_URL or DISCORD_WEBHOOK_URL in repository secrets
+
+name: Notifications
+
+on:
+  workflow_run:
+    workflows: ["Backend CI", "Web App", "Security Scan"]
+    types: [completed]
+
+jobs:
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+
+    steps:
+      - name: Notify Slack on Failure
+        if: ${{ vars.SLACK_ENABLED == 'true' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ github.event.workflow_run.conclusion }}
+          fields: repo,message,commit,author,action,eventName,workflow
+          text: |
+            :x: *${{ github.event.workflow_run.name }}* failed
+            Commit: ${{ github.event.workflow_run.head_sha }}
+            Branch: ${{ github.event.workflow_run.head_branch }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Discord on Failure
+        if: ${{ vars.DISCORD_ENABLED == 'true' }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: ${{ github.event.workflow_run.conclusion }}
+          title: "${{ github.event.workflow_run.name }} Failed"
+          description: |
+            Workflow `${{ github.event.workflow_run.name }}` failed
+            Commit: ${{ github.event.workflow_run.head_sha }}
+            Branch: ${{ github.event.workflow_run.head_branch }}
+          color: 0xff0000
+
+  notify-success:
+    name: Notify on Success (Optional)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.NOTIFY_SUCCESS == 'true' }}
+
+    steps:
+      - name: Notify Slack on Success
+        if: ${{ vars.SLACK_ENABLED == 'true' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          fields: repo,message,commit,author,workflow
+          text: ":white_check_mark: *${{ github.event.workflow_run.name }}* succeeded"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

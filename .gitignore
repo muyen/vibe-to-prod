@@ -1,0 +1,169 @@
+# =============================================================================
+# Vibe to Production - .gitignore
+# =============================================================================
+
+# =============================================================================
+# Secrets and Environment
+# =============================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+**/secrets/
+**/*.secret
+
+# Firebase config files (contain project-specific data)
+GoogleService-Info.plist
+google-services.json
+
+# =============================================================================
+# IDE and Editor
+# =============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Claude Code
+# =============================================================================
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/*.backup-*
+
+# =============================================================================
+# Go
+# =============================================================================
+backend/bin/
+backend/tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+vendor/
+
+# =============================================================================
+# iOS
+# =============================================================================
+mobile/ios/*.xcodeproj
+mobile/ios/*.xcworkspace
+mobile/ios/Pods/
+mobile/ios/DerivedData/
+mobile/ios/build/
+mobile/ios/.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+mobile/ios/Carthage/
+*.hmap
+*.xccheckout
+*.moved-aside
+*.playground/
+*.gcno
+mobile/ios/fastlane/report.xml
+mobile/ios/fastlane/Preview.html
+mobile/ios/fastlane/screenshots/
+mobile/ios/fastlane/test_output/
+
+# =============================================================================
+# Android
+# =============================================================================
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/android/*.iml
+mobile/android/.idea/
+*.apk
+*.aab
+*.ap_
+*.dex
+mobile/android/captures/
+mobile/android/.externalNativeBuild/
+mobile/android/.cxx/
+mobile/android/fastlane/report.xml
+mobile/android/fastlane/Preview.html
+mobile/android/fastlane/screenshots/
+
+# =============================================================================
+# Ruby (Fastlane)
+# =============================================================================
+.bundle/
+Gemfile.lock
+vendor/bundle/
+
+# =============================================================================
+# Node.js
+# =============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# =============================================================================
+# Pulumi
+# =============================================================================
+infrastructure/pulumi/.pulumi/
+infrastructure/pulumi/Pulumi.*.yaml.bak
+
+# =============================================================================
+# Testing
+# =============================================================================
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+junit.xml
+
+# =============================================================================
+# Logs
+# =============================================================================
+*.log
+logs/
+npm-debug.log*
+
+# =============================================================================
+# Temporary files
+# =============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# =============================================================================
+# Generated files (regenerate with scripts/openapi_workflow.py)
+# =============================================================================
+# Note: These are tracked but should be regenerated, not edited directly
+# backend/internal/api/generated/
+# mobile/ios/Generated/
+# mobile/android/app/src/main/kotlin/generated/

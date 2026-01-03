@@ -1,0 +1,82 @@
+# Security Scanning Workflow
+# Runs on every push and weekly
+#
+# NOTE: This workflow is optimized for PRIVATE repos:
+# - SARIF uploads require GitHub Advanced Security (paid)
+# - Dependency Review requires GitHub Advanced Security (paid)
+# - govulncheck warns but doesn't fail (stdlib vulns require Go version upgrades)
+
+name: Security Scan
+
+# Security scanning enabled on push, PR, and weekly schedule
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'web/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'web/**'
+  schedule:
+    # Run weekly on Sunday at midnight
+    - cron: '0 0 * * 0'
+  workflow_dispatch:  # Manual trigger also available
+
+jobs:
+  # Go Security Scan
+  go-security:
+    name: Go Security
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run Gosec Security Scanner
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          cd backend && gosec -fmt=text ./...
+
+      - name: Run govulncheck
+        # Note: govulncheck may find stdlib vulnerabilities that require Go version upgrades
+        # We continue-on-error to avoid failing builds for issues outside our control
+        # Review output and upgrade Go when feasible
+        continue-on-error: true
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          cd backend && govulncheck ./...
+
+  # Trivy Container Scan
+  container-scan:
+    name: Container Scan
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          cd backend
+          docker build -t app:test .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'app:test'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+# NOTE: The following features require GitHub Advanced Security (paid for private repos):
+# - CodeQL: Semantic code analysis
+# - Dependency Review: PR dependency change analysis
+# - SARIF uploads: Security tab integration
+#
+# To enable, either:
+# 1. Make repo public, OR
+# 2. Enable GitHub Advanced Security (paid feature)

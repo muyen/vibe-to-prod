@@ -1,0 +1,378 @@
+# Web CI/CD Pipeline (Reusable Workflow)
+# Called by web-ci.yml and web-prod-promotion.yml
+#
+# IMPORTANT: Configure these environment variables for your project:
+# - PROJECT_ID_DEV: Your Firebase dev project ID
+# - PROJECT_ID_PROD: Your Firebase prod project ID
+# - NEXT_PUBLIC_API_URL: Your API Gateway/backend URL
+
+name: Web CI/CD Pipeline
+run-name: "Web ${{ inputs.environment || 'dev' }} - ${{ inputs.deploy && 'Deploy' || 'CI' }}${{ inputs.force_deploy && ' (forced)' || '' }}"
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: 'Runner to use'
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+      environment:
+        description: 'Target environment (development/production)'
+        required: false
+        default: 'development'
+        type: string
+      run_tests:
+        description: 'Run tests before deployment'
+        required: false
+        default: true
+        type: boolean
+      deploy:
+        description: 'Deploy after successful tests'
+        required: false
+        default: false
+        type: boolean
+      deploy_mode:
+        description: 'Deploy mode: all (hosting+functions ~5min), hosting_only (static ~1min)'
+        required: false
+        default: 'all'
+        type: string
+      force_deploy:
+        description: 'Force deployment even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      FIREBASE_TOKEN:
+        description: 'Firebase token for deployment'
+        required: false
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use'
+        required: true
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+        - ubuntu-latest
+        - self-hosted
+      environment:
+        description: 'Target environment for deployment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - production
+      run_tests:
+        description: 'Run tests before deployment'
+        required: true
+        default: true
+        type: boolean
+      deploy:
+        description: 'Deploy after successful tests'
+        required: true
+        default: true
+        type: boolean
+      deploy_mode:
+        description: 'Deploy mode (all=hosting+functions ~5min, hosting_only=static ~1min)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - hosting_only
+      force_deploy:
+        description: 'Force deployment even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  # TODO: Replace with your Firebase project IDs
+  PROJECT_ID_DEV: myapp-dev
+  PROJECT_ID_PROD: myapp
+  NODE_OPTIONS: '--max-old-space-size=4096'
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  # Detect what changed to determine if deploy is needed
+  changes:
+    name: Detect Changes
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    outputs:
+      web_changed: ${{ steps.filter.outputs.web }}
+      should_deploy: ${{ steps.decision.outputs.should_deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for web changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'web/**'
+              - '.github/workflows/web-cicd.yml'
+
+      - name: Deployment decision
+        id: decision
+        run: |
+          if [[ "${{ inputs.force_deploy }}" == "true" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Force deploy enabled"
+          elif [[ "${{ steps.filter.outputs.web }}" == "true" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Web changes detected"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "⏭️ No web changes detected, skipping deploy"
+          fi
+
+  # CI job - always runs for quality checks
+  web-ci:
+    name: "Web CI (${{ inputs.environment || 'development' }})"
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: [changes]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci --prefer-offline
+
+      - name: Parallel code quality checks
+        working-directory: ./web
+        run: |
+          # Run type checking, linting, and format checking in parallel
+          npm run type-check &
+          npm run lint &
+          npm run format:check &
+          wait
+          echo "✅ All code quality checks passed"
+
+      - name: Run unit tests
+        if: ${{ inputs.run_tests }}
+        working-directory: ./web
+        env:
+          # TODO: Set your API URL based on environment
+          NEXT_PUBLIC_API_URL: ${{ inputs.environment == 'production' && vars.API_URL_PROD || vars.API_URL_DEV }}
+        run: npm run test
+
+      - name: Build for Firebase
+        working-directory: ./web
+        env:
+          # TODO: Set your API URL based on environment
+          NEXT_PUBLIC_API_URL: ${{ inputs.environment == 'production' && vars.API_URL_PROD || vars.API_URL_DEV }}
+        run: |
+          npm run build
+          echo "✅ Firebase build successful"
+
+      - name: Upload build artifacts
+        if: ${{ inputs.deploy && needs.changes.outputs.should_deploy == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build-${{ github.sha }}
+          path: |
+            web/.next
+            web/.firebase
+            web/out
+            web/public
+          retention-days: 1
+
+  # Deploy hosting only (fast ~1 min) - static files only
+  web-deploy-hosting:
+    name: "Deploy Hosting (${{ inputs.environment }})"
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: [changes, web-ci]
+    if: ${{ inputs.deploy && needs.changes.outputs.should_deploy == 'true' && inputs.deploy_mode == 'hosting_only' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            echo "PROJECT_ID=${{ env.PROJECT_ID_PROD }}" >> "$GITHUB_ENV"
+            echo "FIREBASE_PROJECT=${{ env.PROJECT_ID_PROD }}" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_ID=${{ env.PROJECT_ID_DEV }}" >> "$GITHUB_ENV"
+            echo "FIREBASE_PROJECT=${{ env.PROJECT_ID_DEV }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build-${{ github.sha }}
+          path: web
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy static hosting only
+        working-directory: ./web
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_TOKEN_DEV: ${{ secrets.FIREBASE_TOKEN_DEV }}
+          FIREBASE_TOKEN_PROD: ${{ secrets.FIREBASE_TOKEN_PROD }}
+        run: |
+          echo "🚀 Deploying static hosting only (${{ inputs.environment }})..."
+
+          # Determine token
+          DEPLOY_TOKEN=""
+          if [ "${{ inputs.environment }}" = "production" ] && [ -n "$FIREBASE_TOKEN_PROD" ]; then
+            DEPLOY_TOKEN="$FIREBASE_TOKEN_PROD"
+          elif [ "${{ inputs.environment }}" = "development" ] && [ -n "$FIREBASE_TOKEN_DEV" ]; then
+            DEPLOY_TOKEN="$FIREBASE_TOKEN_DEV"
+          elif [ -n "$FIREBASE_TOKEN" ]; then
+            DEPLOY_TOKEN="$FIREBASE_TOKEN"
+          else
+            echo "❌ No Firebase token available"
+            exit 1
+          fi
+
+          # Deploy hosting files only
+          firebase hosting:channel:deploy live \
+            --project ${{ env.FIREBASE_PROJECT }} \
+            --token "$DEPLOY_TOKEN" \
+            --no-authorized-domains || \
+          firebase deploy --project ${{ env.FIREBASE_PROJECT }} --only hosting:files --force --token "$DEPLOY_TOKEN"
+
+          echo "✅ Static hosting deployed!"
+          echo "🔗 https://${{ env.FIREBASE_PROJECT }}.web.app"
+
+  # Deploy all (hosting + functions ~5 min) - for SSR routes
+  web-deploy-all:
+    name: "Deploy All (${{ inputs.environment }})"
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: [changes, web-ci]
+    if: ${{ inputs.deploy && needs.changes.outputs.should_deploy == 'true' && inputs.deploy_mode == 'all' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            echo "PROJECT_ID=${{ env.PROJECT_ID_PROD }}" >> "$GITHUB_ENV"
+            echo "FIREBASE_PROJECT=${{ env.PROJECT_ID_PROD }}" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_ID=${{ env.PROJECT_ID_DEV }}" >> "$GITHUB_ENV"
+            echo "FIREBASE_PROJECT=${{ env.PROJECT_ID_DEV }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build-${{ github.sha }}
+          path: web
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci --prefer-offline
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy hosting + functions
+        working-directory: ./web
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_TOKEN_DEV: ${{ secrets.FIREBASE_TOKEN_DEV }}
+          FIREBASE_TOKEN_PROD: ${{ secrets.FIREBASE_TOKEN_PROD }}
+        run: |
+          echo "🚀 Deploying hosting + functions (${{ inputs.environment }})..."
+
+          # Determine token
+          DEPLOY_TOKEN=""
+          if [ "${{ inputs.environment }}" = "production" ] && [ -n "$FIREBASE_TOKEN_PROD" ]; then
+            DEPLOY_TOKEN="$FIREBASE_TOKEN_PROD"
+            echo "✅ Using FIREBASE_TOKEN_PROD"
+          elif [ "${{ inputs.environment }}" = "development" ] && [ -n "$FIREBASE_TOKEN_DEV" ]; then
+            DEPLOY_TOKEN="$FIREBASE_TOKEN_DEV"
+            echo "✅ Using FIREBASE_TOKEN_DEV"
+          elif [ -n "$FIREBASE_TOKEN" ]; then
+            DEPLOY_TOKEN="$FIREBASE_TOKEN"
+            echo "✅ Using FIREBASE_TOKEN"
+          else
+            echo "❌ No Firebase token available"
+            exit 1
+          fi
+
+          # Enable Firebase web frameworks experiment
+          firebase experiments:enable webframeworks --token "$DEPLOY_TOKEN" || true
+
+          # Deploy hosting + SSR function
+          firebase deploy --project ${{ env.FIREBASE_PROJECT }} --only hosting --force --token "$DEPLOY_TOKEN"
+
+          echo "✅ Full deployment complete!"
+          echo "🔗 Frontend: https://${{ env.FIREBASE_PROJECT }}.web.app"
+
+  # Summary job
+  summary:
+    name: "Summary (${{ inputs.environment }})"
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: [changes, web-ci, web-deploy-hosting, web-deploy-all]
+    if: always()
+
+    steps:
+      - name: Display results
+        run: |
+          echo "🔍 Web CI/CD Results Summary"
+          echo "============================"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Deploy mode: ${{ inputs.deploy_mode }}"
+          echo "Run tests: ${{ inputs.run_tests }}"
+          echo "Deploy: ${{ inputs.deploy }}"
+          echo "Force deploy: ${{ inputs.force_deploy }}"
+          echo "Web changed: ${{ needs.changes.outputs.web_changed }}"
+          echo "Should deploy: ${{ needs.changes.outputs.should_deploy }}"
+          echo ""
+          echo "CI Result: ${{ needs.web-ci.result }}"
+          echo "Deploy Hosting Result: ${{ needs.web-deploy-hosting.result || 'skipped' }}"
+          echo "Deploy All Result: ${{ needs.web-deploy-all.result || 'skipped' }}"
+          echo ""
+
+          if [[ "${{ needs.web-ci.result }}" == "failure" ]]; then
+            echo "❌ Web CI failed"
+            exit 1
+          elif [[ "${{ needs.web-deploy-hosting.result }}" == "failure" ]]; then
+            echo "❌ Hosting deployment failed"
+            exit 1
+          elif [[ "${{ needs.web-deploy-all.result }}" == "failure" ]]; then
+            echo "❌ Full deployment failed"
+            exit 1
+          elif [[ "${{ needs.changes.outputs.should_deploy }}" == "false" && "${{ inputs.deploy }}" == "true" ]]; then
+            echo "⏭️ No changes detected, deployment skipped"
+          else
+            echo "✅ Web CI/CD completed successfully"
+          fi

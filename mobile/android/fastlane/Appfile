@@ -1,0 +1,10 @@
+# Google Play Store configuration
+# Replace with your values
+
+# Package name from build.gradle
+# package_name("com.yourcompany.app")
+
+# Path to Google Play API key JSON
+# json_key_file("path/to/play-store-key.json")
+# Or use environment variable:
+# json_key_file(ENV["GOOGLE_PLAY_KEY_FILE"])

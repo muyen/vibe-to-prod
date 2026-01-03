@@ -1,0 +1,87 @@
+# Customise this file, documentation can be found here:
+# https://docs.fastlane.tools/actions
+# https://docs.fastlane.tools/plugins/available-plugins
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Run tests"
+  lane :test do
+    # Generate Xcode project from XcodeGen
+    sh("cd .. && xcodegen generate")
+
+    run_tests(
+      scheme: "App",
+      device: "iPhone 15",
+      clean: true
+    )
+  end
+
+  desc "Build for development"
+  lane :build_dev do
+    sh("cd .. && xcodegen generate")
+
+    build_app(
+      scheme: "App",
+      configuration: "Debug",
+      export_method: "development",
+      skip_codesigning: true
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Increment build number
+    increment_build_number(
+      build_number: ENV["BUILD_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
+    )
+
+    # Generate Xcode project
+    sh("cd .. && xcodegen generate")
+
+    # Build the app
+    build_app(
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store"
+    )
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Build and upload to App Store"
+  lane :release do
+    # Increment version if specified
+    if ENV["VERSION_NUMBER"]
+      increment_version_number(
+        version_number: ENV["VERSION_NUMBER"]
+      )
+    end
+
+    increment_build_number(
+      build_number: ENV["BUILD_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
+    )
+
+    sh("cd .. && xcodegen generate")
+
+    build_app(
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store"
+    )
+
+    upload_to_app_store(
+      submit_for_review: false,
+      automatic_release: false
+    )
+  end
+
+  desc "Sync certificates and profiles"
+  lane :sync_certs do
+    match(type: "development")
+    match(type: "appstore")
+  end
+end

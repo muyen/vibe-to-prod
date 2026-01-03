@@ -1,0 +1,17 @@
+name: app-infrastructure
+runtime: go
+description: Infrastructure as Code using Pulumi
+
+template:
+  config:
+    gcp:project:
+      description: The Google Cloud project ID
+    gcp:region:
+      description: The Google Cloud region
+      default: us-central1
+    appName:
+      description: Application name for resource naming
+      default: app
+    environment:
+      description: Environment (dev or prod)
+      default: dev

@@ -1,0 +1,205 @@
+# Infrastructure Deploy (Pulumi)
+# MANUAL ONLY - Infrastructure changes are infrequent and high-stakes
+#
+# NOTE: For most cases, run `pulumi up` locally instead - it's faster and
+# you can review the preview interactively.
+#
+# This workflow is available for:
+# - Audit trail when needed
+# - CI validation of Pulumi code
+# - Deployments when local access isn't available
+
+name: Infrastructure Deploy
+
+on:
+  # Auto-deploy disabled - run locally for faster iteration
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'infrastructure/pulumi/**'
+  #     - '!infrastructure/pulumi/*.md'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use'
+        required: true
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+        - ubuntu-latest
+        - self-hosted
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - production
+          - both
+      preview_only:
+        description: 'Preview only (no apply)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+jobs:
+  # Detect what changed to determine which environments to deploy
+  changes:
+    name: Detect Changes
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      dev_config: ${{ steps.filter.outputs.dev_config }}
+      prod_config: ${{ steps.filter.outputs.prod_config }}
+      deploy_dev: ${{ steps.decision.outputs.deploy_dev }}
+      deploy_prod: ${{ steps.decision.outputs.deploy_prod }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'infrastructure/pulumi/main.go'
+              - 'infrastructure/pulumi/go.mod'
+              - 'infrastructure/pulumi/go.sum'
+              - 'infrastructure/pulumi/Pulumi.yaml'
+            dev_config:
+              - 'infrastructure/pulumi/Pulumi.development.yaml'
+            prod_config:
+              - 'infrastructure/pulumi/Pulumi.production.yaml'
+
+      - name: Deployment decision
+        id: decision
+        run: |
+          # For workflow_dispatch, use the selected environment
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+            if [[ "$ENV" == "development" || "$ENV" == "both" ]]; then
+              echo "deploy_dev=true" >> $GITHUB_OUTPUT
+            else
+              echo "deploy_dev=false" >> $GITHUB_OUTPUT
+            fi
+            if [[ "$ENV" == "production" || "$ENV" == "both" ]]; then
+              echo "deploy_prod=true" >> $GITHUB_OUTPUT
+            else
+              echo "deploy_prod=false" >> $GITHUB_OUTPUT
+            fi
+            exit 0
+          fi
+
+          # For push events, check what changed
+          SHARED="${{ steps.filter.outputs.shared }}"
+          DEV_CONFIG="${{ steps.filter.outputs.dev_config }}"
+          PROD_CONFIG="${{ steps.filter.outputs.prod_config }}"
+
+          # Deploy dev if: shared code changed OR dev config changed
+          if [[ "$SHARED" == "true" || "$DEV_CONFIG" == "true" ]]; then
+            echo "deploy_dev=true" >> $GITHUB_OUTPUT
+            echo "✅ Will deploy to development"
+          else
+            echo "deploy_dev=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Skipping development (no changes)"
+          fi
+
+          # Deploy prod if: shared code changed OR prod config changed
+          if [[ "$SHARED" == "true" || "$PROD_CONFIG" == "true" ]]; then
+            echo "deploy_prod=true" >> $GITHUB_OUTPUT
+            echo "✅ Will deploy to production"
+          else
+            echo "deploy_prod=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Skipping production (no changes)"
+          fi
+
+  # Development deployment
+  deploy-dev:
+    name: Deploy Development
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: changes
+    if: needs.changes.outputs.deploy_dev == 'true'
+    environment: development
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: infrastructure/pulumi/go.sum
+
+      - name: Authenticate to Google Cloud (Infra)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_INFRA }}
+
+      - name: Setup Pulumi
+        uses: pulumi/actions@v5
+
+      - name: Pulumi Preview (Development)
+        if: github.event.inputs.preview_only == 'true'
+        uses: pulumi/actions@v5
+        with:
+          command: preview
+          stack-name: development
+          work-dir: infrastructure/pulumi
+
+      - name: Pulumi Up (Development)
+        if: github.event.inputs.preview_only != 'true'
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: development
+          work-dir: infrastructure/pulumi
+
+  # Production deployment
+  deploy-prod:
+    name: Deploy Production
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: changes
+    if: needs.changes.outputs.deploy_prod == 'true'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: infrastructure/pulumi/go.sum
+
+      - name: Authenticate to Google Cloud (Infra)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_INFRA }}
+
+      - name: Setup Pulumi
+        uses: pulumi/actions@v5
+
+      - name: Pulumi Preview (Production)
+        if: github.event.inputs.preview_only == 'true'
+        uses: pulumi/actions@v5
+        with:
+          command: preview
+          stack-name: production
+          work-dir: infrastructure/pulumi
+
+      - name: Pulumi Up (Production)
+        if: github.event.inputs.preview_only != 'true'
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: production
+          work-dir: infrastructure/pulumi
