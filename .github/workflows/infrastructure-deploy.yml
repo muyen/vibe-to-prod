@@ -144,11 +144,11 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY_INFRA }}
 
       - name: Setup Pulumi
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v6
 
       - name: Pulumi Preview (Development)
         if: github.event.inputs.preview_only == 'true'
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v6
         with:
           command: preview
           stack-name: development
@@ -156,7 +156,7 @@ jobs:
 
       - name: Pulumi Up (Development)
         if: github.event.inputs.preview_only != 'true'
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v6
         with:
           command: up
           stack-name: development
@@ -186,11 +186,11 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY_INFRA }}
 
       - name: Setup Pulumi
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v6
 
       - name: Pulumi Preview (Production)
         if: github.event.inputs.preview_only == 'true'
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v6
         with:
           command: preview
           stack-name: production
@@ -198,7 +198,7 @@ jobs:
 
       - name: Pulumi Up (Production)
         if: github.event.inputs.preview_only != 'true'
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v6
         with:
           command: up
           stack-name: production
