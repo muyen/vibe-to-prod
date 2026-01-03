@@ -6,16 +6,17 @@ Useful checklists for common development tasks.
 
 ## Feature Development
 
-- [ ] Create OpenSpec proposal if significant change
+- [ ] Create Linear issue for tracking
 - [ ] Create feature branch (`feature/description`)
 - [ ] Implement backend changes
 - [ ] Add backend tests
-- [ ] Implement iOS changes
-- [ ] Implement Android changes
-- [ ] Run all tests
+- [ ] Implement iOS changes (if needed)
+- [ ] Implement Android changes (if needed)
+- [ ] Run all tests (`make test`)
 - [ ] Create PR
 - [ ] Get code review
 - [ ] Merge to main
+- [ ] Update Linear issue
 
 ---
 

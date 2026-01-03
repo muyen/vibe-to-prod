@@ -34,9 +34,9 @@ claude
 | `/code-review` | Review code for issues |
 | `/generate-tests` | Create test suite |
 | `/refactor-code` | Safe refactoring |
-| `/openspec:proposal` | Plan a significant change |
-| `/openspec:apply` | Implement approved change |
-| `/openspec:archive` | Archive completed change |
+| `/ultra-think` | Deep analysis mode |
+| `/security-scan` | Security vulnerability check |
+| `/improve-claude-config` | Audit and improve config |
 
 ### Skills (`.claude/skills/`)
 
@@ -259,15 +259,15 @@ Don't fight the skills. When debugging:
 - Let `systematic-debugging` skill guide the process
 - Follow the 4-phase approach
 
-### 3. Use OpenSpec for Big Changes
+### 3. Use Linear for Multi-Session Work
 
-For anything that touches multiple files or takes multiple sessions:
+For anything that spans multiple sessions:
 
 ```
-/openspec:proposal   # Plan first
-# Get approval
-/openspec:apply      # Then implement
-/openspec:archive    # When deployed
+1. Create a Linear issue describing the task
+2. Claude updates the issue as work progresses
+3. Next session, Claude reads the issue for context
+4. Close the issue when done
 ```
 
 ### 4. Trust the Hooks

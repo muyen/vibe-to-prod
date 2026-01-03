@@ -18,6 +18,56 @@ Most templates stop at boilerplate. This one goes to deployed.
 
 ---
 
+## What Makes This Different
+
+> ⚠️ **Work in Progress**: This template is actively being developed. Contributions welcome!
+
+### 1. Continuous Improvement Built In
+
+Every mistake becomes a lesson. The AI workflow gets smarter over time:
+
+```
+Repeated mistake  → Add rule to .claude/rules/
+Complex process   → Create skill in .claude/skills/
+New pattern       → Store in Memory MCP
+Missing tool      → Create Linear issue for later
+```
+
+After a few months: rules catch mistakes before they happen, skills automate processes, and memory contains project-specific knowledge.
+
+### 2. Linear Integration Solves AI Context
+
+**The Problem**: Each AI session starts fresh. Context is lost. You repeat yourself.
+
+**The Solution**: Linear MCP integration.
+
+```
+Session 1: Start task → Create Linear issue → Work → Update issue
+Session 2: Read issue → Continue where you left off → Update issue
+Session 3: Read issue → Finish → Close issue
+```
+
+Full context across sessions. No more "where was I?"
+
+### 3. Claude Automation for Everything
+
+Pre-built commands, skills, and hooks:
+
+| Type | Examples | Purpose |
+|------|----------|---------|
+| **Commands** | `/commit`, `/code-review`, `/security-scan` | One-command workflows |
+| **Skills** | `continuous-improvement`, `systematic-debugging` | Auto-activate on context |
+| **Hooks** | `protect-generated-files`, `session-start` | Quality gates |
+
+### 4. Security & Scale Considerations
+
+- Security scanning in CI (gosec, govulncheck, CodeQL, Trivy)
+- Production scaling guide (`docs/SCALING.md`)
+- Workload Identity Federation (no stored secrets)
+- OWASP considerations documented
+
+---
+
 ## What's Inside
 
 | Layer | Tech | Why |
@@ -33,18 +83,6 @@ Most templates stop at boilerplate. This one goes to deployed.
 
 Everything in one monorepo. Clone once, ship everything.
 
-### Built-In: Continuous Improvement
-
-Every mistake becomes a lesson. The AI workflow is designed to get smarter over time:
-
-| Learning Type | Action |
-|---------------|--------|
-| Same mistake twice | Add rule to `.claude/rules/` |
-| Complex manual process | Create skill in `.claude/skills/` |
-| New pattern discovered | Store in Memory MCP |
-
-After a few months: rules catch mistakes before they happen, skills automate processes, and memory contains project-specific knowledge. This is the difference between "using AI" and "building an AI-assisted workflow."
-
 ---
 
 ## Quick Start
@@ -54,16 +92,19 @@ After a few months: rules catch mistakes before they happen, skills automate pro
 git clone <this-repo> my-app
 cd my-app
 
-# 2. Run setup (configures GCP, Pulumi, Firebase)
+# 2. Install git hooks (enforces commit format, prevents secrets)
+git config core.hooksPath .githooks
+
+# 3. Run setup (configures GCP, Pulumi, Firebase)
 ./scripts/setup.sh
 
-# 3. Deploy infrastructure
+# 4. Deploy infrastructure
 cd infrastructure/pulumi && make deploy-dev
 
-# 4. Run backend
+# 5. Run backend
 cd backend && make run
 
-# 5. Open mobile apps
+# 6. Open mobile apps
 # iOS: cd mobile/ios && xcodegen generate && open App.xcodeproj
 # Android: Open mobile/android in Android Studio
 ```
@@ -98,55 +139,41 @@ cd backend && make run
 
 ## Documentation
 
-### For Humans
+### Start Here
 
 | Doc | What It's For |
 |-----|---------------|
+| **[PRODUCTION_GAP.md](docs/PRODUCTION_GAP.md)** | **The gap between vibe coding and production** |
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Setup instructions |
-| [SETUP_CHECKLIST.md](docs/SETUP_CHECKLIST.md) | All accounts and secrets needed |
-| [THE_CHALLENGE.md](docs/THE_CHALLENGE.md) | Why production is hard |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Why these technologies |
-| [VISION.md](VISION.md) | Project philosophy |
 
-### For AI Assistants
-
-| Doc | What It's For |
-|-----|---------------|
-| [CLAUDE.md](CLAUDE.md) | AI context and rules |
-| [AI_WORKFLOW.md](docs/AI_WORKFLOW.md) | MCP servers to install |
-| [API_GATEWAY.md](docs/API_GATEWAY.md) | Auth architecture |
-| [.claude/](/.claude) | Skills, commands, hooks |
-
-### Both
+### Production Readiness
 
 | Doc | What It's For |
 |-----|---------------|
-| Root [Makefile](Makefile) | Unified CLI commands |
-| [WORKFLOWS.md](docs/WORKFLOWS.md) | Development patterns |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues |
+| [TESTING.md](docs/TESTING.md) | Testing strategy and examples |
+| [SCALING.md](docs/SCALING.md) | When and how to scale |
+| [CICD.md](docs/CICD.md) | CI/CD pipelines and secrets |
+| [API_GATEWAY.md](docs/API_GATEWAY.md) | Auth and API architecture |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
+
+### AI-Assisted Development
+
+| Doc | What It's For |
+|-----|---------------|
+| [CLAUDE.md](CLAUDE.md) | AI memory and rules |
+| [AI_BOOTSTRAP.md](docs/AI_BOOTSTRAP.md) | First session guide for AI |
+| [AI_WORKFLOW.md](docs/AI_WORKFLOW.md) | MCP servers, Linear integration |
 
 ---
 
-## Why Open Source?
+## Contributing
 
-Because trust comes before transactions.
+This is a work in progress. Contributions welcome!
 
-You can read every line. You can judge the decisions. You can run it, break it, fix it.
-
-If the code is bad, you'll know. If it's good, you'll know that too.
-
-Read more: [WHY_OPEN_SOURCE.md](WHY_OPEN_SOURCE.md)
-
----
-
-## Philosophy
-
-Read the full vision: [VISION.md](VISION.md)
-
-**TL;DR:**
-- Production is a skill, not a secret
-- This is optimized for "I want to ship this for real"
-- Money is not the first goal — credibility is
+- Found a gap? Open an issue
+- Fixed something? Submit a PR
+- Shipped to production with this? Share your experience
 
 ---
 

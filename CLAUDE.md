@@ -99,11 +99,10 @@ make verify-all  # or run each: backend, iOS, Android
 
 ```bash
 # 1. Plan with /ultra-think if complex
-# 2. Use /openspec:proposal for multi-file changes
-# 3. Implement with platform rules loaded
-# 4. Test across affected platforms
-# 5. Review with /code-review
-# 6. Commit with /commit
+# 2. Implement with platform rules loaded
+# 3. Test across affected platforms
+# 4. Review with /code-review
+# 5. Commit with /commit
 ```
 
 ---
@@ -119,9 +118,6 @@ make verify-all  # or run each: backend, iOS, Android
 | `/ultra-think` | Deep analysis mode |
 | `/security-scan` | Security vulnerability check |
 | `/improve-claude-config` | Audit and improve config |
-| `/openspec:proposal` | Plan significant change |
-| `/openspec:apply` | Implement approved change |
-| `/openspec:archive` | Archive completed change |
 
 ---
 
