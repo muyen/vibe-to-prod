@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Reports (generated)
+reports/
+test-results/
+
+# Playwright
+playwright-report/
+playwright/.cache/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log

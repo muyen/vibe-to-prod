@@ -1,0 +1,197 @@
+# E2E Regression Tests
+# Manual-only workflow - run before releases or after major changes
+# Production promotions are manual, E2E tests should match that cadence
+#
+# IMPORTANT: Configure BASE_URL for your environments
+
+name: E2E Regression Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use'
+        required: true
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - production
+          - local
+      parallel:
+        description: 'Run tests in parallel'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  PLAYWRIGHT_VERSION: '1.40.0'
+
+jobs:
+  e2e-regression:
+    name: E2E Regression Tests
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: automation/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./automation
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./automation
+        run: npx playwright install --with-deps chromium
+
+      - name: Set environment variables
+        run: |
+          echo "TEST_ENV=${{ inputs.environment }}" >> $GITHUB_ENV
+          echo "PARALLEL=${{ inputs.parallel }}" >> $GITHUB_ENV
+
+      - name: Wait for deployment to be ready
+        if: env.TEST_ENV == 'development'
+        run: |
+          echo "Waiting for development environment to be ready..."
+          # Give Cloud Run deployment time to fully start
+          sleep 30
+
+          # TODO: Add actual health check once development URL is configured
+          # MAX_RETRIES=10
+          # for i in $(seq 1 $MAX_RETRIES); do
+          #   if curl -sf ${{ vars.API_URL_DEV }}/health; then
+          #     echo "Development environment is ready"
+          #     exit 0
+          #   fi
+          #   echo "Attempt $i/$MAX_RETRIES failed, waiting..."
+          #   sleep 10
+          # done
+          # echo "Development environment not ready after $MAX_RETRIES attempts"
+          # exit 1
+
+      - name: Run API tests (Newman)
+        working-directory: ./automation
+        continue-on-error: true
+        id: api-tests
+        run: |
+          echo "Running API tests against $TEST_ENV environment..."
+          npm run test:smoke:dev
+        env:
+          TEST_ENV: ${{ env.TEST_ENV }}
+
+      - name: Run E2E tests (Playwright)
+        working-directory: ./automation
+        continue-on-error: true
+        id: e2e-tests
+        run: |
+          echo "Running E2E tests against $TEST_ENV environment..."
+          # Only run chromium project in CI (faster and avoids browser install issues)
+          if [ "$PARALLEL" == "true" ]; then
+            npx playwright test --project=chromium --workers=4
+          else
+            npx playwright test --project=chromium --workers=1
+          fi
+        env:
+          TEST_ENV: ${{ env.TEST_ENV }}
+          # TODO: Configure your environment URLs
+          BASE_URL: ${{ env.TEST_ENV == 'development' && vars.API_URL_DEV || (env.TEST_ENV == 'production' && vars.API_URL_PROD || 'http://localhost:8080') }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: automation/reports/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            automation/reports/playwright-results.json
+            automation/reports/playwright-results.xml
+          retention-days: 30
+
+      - name: Upload Newman API test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-results
+          path: automation/reports/smoke-test-results-dev.json
+          retention-days: 30
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots
+          path: automation/test-results/
+          retention-days: 30
+
+      - name: Check test results
+        if: always()
+        run: |
+          API_RESULT="${{ steps.api-tests.outcome }}"
+          E2E_RESULT="${{ steps.e2e-tests.outcome }}"
+
+          echo "API Tests: $API_RESULT"
+          echo "E2E Tests: $E2E_RESULT"
+
+          if [ "$API_RESULT" == "failure" ] || [ "$E2E_RESULT" == "failure" ]; then
+            echo "Some tests failed. Check artifacts for details."
+            exit 1
+          fi
+
+          echo "All tests passed!"
+
+  # Optional: Run smoke tests on production (when environment=production selected)
+  smoke-test-production:
+    name: Production Smoke Tests
+    runs-on: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    if: inputs.environment == 'production'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: automation/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./automation
+        run: npm ci
+
+      - name: Run production smoke tests
+        working-directory: ./automation
+        run: npm run test:smoke:prod
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-production
+          path: automation/reports/smoke-test-results-prod.json
+          retention-days: 90

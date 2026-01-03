@@ -1,0 +1,105 @@
+name: Deploy Web to Firebase
+
+# TRIGGERS DISABLED to save GitHub Actions minutes
+# Uncomment when ready to enable automatic deploys:
+#
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'web/**'
+#   workflow_dispatch:
+#     inputs:
+#       environment:
+#         ...
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  # CUSTOMIZE: Your Firebase project IDs
+  FIREBASE_PROJECT_DEV: your-project-dev
+  FIREBASE_PROJECT_PROD: your-project-prod
+
+jobs:
+  build:
+    name: Build Web App
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for environment
+        env:
+          NEXT_PUBLIC_API_URL: ${{ inputs.environment == 'prod' && secrets.API_URL_PROD || secrets.API_URL_DEV }}
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: web/out/
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Firebase Hosting
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: build
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: web/out/
+
+      - name: Select Firebase project
+        id: project
+        run: |
+          if [ "${{ inputs.environment }}" == "prod" ]; then
+            echo "project=${{ env.FIREBASE_PROJECT_PROD }}" >> $GITHUB_OUTPUT
+          else
+            echo "project=${{ env.FIREBASE_PROJECT_DEV }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ steps.project.outputs.project }}
+          channelId: ${{ inputs.environment == 'prod' && 'live' || 'preview' }}
+
+      - name: Summary
+        run: |
+          echo "## Web Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Firebase Project | ${{ steps.project.outputs.project }} |" >> $GITHUB_STEP_SUMMARY

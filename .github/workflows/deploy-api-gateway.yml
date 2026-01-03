@@ -1,0 +1,177 @@
+name: Deploy API Gateway
+
+# Deploys Google Cloud API Gateway configuration
+# API Gateway requires OpenAPI v2 (Swagger 2.0) spec
+#
+# Prerequisites:
+# 1. Enable API Gateway in GCP Console
+# 2. Create API config from openapi-v2.yaml
+# 3. Set up Workload Identity Federation
+#
+# TRIGGERS DISABLED to save GitHub Actions minutes
+# Uncomment when ready to enable automatic deploys:
+#
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'backend/api/openapi*.yaml'
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  # CUSTOMIZE: Your GCP project IDs
+  PROJECT_ID_DEV: your-project-dev
+  PROJECT_ID_PROD: your-project-prod
+  REGION: us-central1
+  # CUSTOMIZE: Your API Gateway names
+  API_NAME: api
+  GATEWAY_NAME: api-gateway
+
+jobs:
+  convert-spec:
+    name: Convert OpenAPI v3 to v2
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install api-spec-converter
+        run: npm install -g api-spec-converter
+
+      - name: Convert OpenAPI v3 to v2 (Swagger)
+        run: |
+          api-spec-converter \
+            --from=openapi_3 \
+            --to=swagger_2 \
+            --syntax=yaml \
+            backend/api/openapi.yaml > backend/api/openapi-v2.yaml
+
+      - name: Validate converted spec
+        run: |
+          npm install -g @apidevtools/swagger-cli
+          swagger validate backend/api/openapi-v2.yaml
+
+      - name: Upload converted spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-v2
+          path: backend/api/openapi-v2.yaml
+          retention-days: 1
+
+  deploy:
+    name: Deploy API Gateway
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: convert-spec
+    environment: ${{ inputs.environment }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download converted spec
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-v2
+          path: backend/api/
+
+      - name: Select GCP Project
+        id: project
+        run: |
+          if [ "${{ inputs.environment }}" == "prod" ]; then
+            echo "project=${{ env.PROJECT_ID_PROD }}" >> $GITHUB_OUTPUT
+            echo "wif_provider=${{ secrets.WIF_PROVIDER_PROD }}" >> $GITHUB_OUTPUT
+            echo "wif_sa=${{ secrets.WIF_SERVICE_ACCOUNT_PROD }}" >> $GITHUB_OUTPUT
+          else
+            echo "project=${{ env.PROJECT_ID_DEV }}" >> $GITHUB_OUTPUT
+            echo "wif_provider=${{ secrets.WIF_PROVIDER_DEV }}" >> $GITHUB_OUTPUT
+            echo "wif_sa=${{ secrets.WIF_SERVICE_ACCOUNT_DEV }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ steps.project.outputs.wif_provider }}
+          service_account: ${{ steps.project.outputs.wif_sa }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get Backend Service URL
+        id: backend-url
+        run: |
+          URL=$(gcloud run services describe backend \
+            --project=${{ steps.project.outputs.project }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)' 2>/dev/null || echo "")
+
+          if [ -z "$URL" ]; then
+            echo "Warning: Backend service not found, using placeholder"
+            URL="https://backend-placeholder.run.app"
+          fi
+
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Backend URL: $URL"
+
+      - name: Update spec with backend URL
+        run: |
+          # Replace backend URL placeholder in OpenAPI spec
+          sed -i "s|https://api.example.com|${{ steps.backend-url.outputs.url }}|g" backend/api/openapi-v2.yaml
+
+      - name: Create API Config
+        run: |
+          CONFIG_ID="config-$(date +%Y%m%d-%H%M%S)"
+          echo "CONFIG_ID=$CONFIG_ID" >> $GITHUB_ENV
+
+          gcloud api-gateway api-configs create $CONFIG_ID \
+            --api=${{ env.API_NAME }} \
+            --openapi-spec=backend/api/openapi-v2.yaml \
+            --project=${{ steps.project.outputs.project }} \
+            --backend-auth-service-account=${{ steps.project.outputs.wif_sa }}
+
+      - name: Update Gateway with new config
+        run: |
+          gcloud api-gateway gateways update ${{ env.GATEWAY_NAME }} \
+            --api=${{ env.API_NAME }} \
+            --api-config=${{ env.CONFIG_ID }} \
+            --location=${{ env.REGION }} \
+            --project=${{ steps.project.outputs.project }}
+
+      - name: Get Gateway URL
+        id: gateway-url
+        run: |
+          URL=$(gcloud api-gateway gateways describe ${{ env.GATEWAY_NAME }} \
+            --location=${{ env.REGION }} \
+            --project=${{ steps.project.outputs.project }} \
+            --format='value(defaultHostname)')
+          echo "url=https://$URL" >> $GITHUB_OUTPUT
+          echo "Gateway URL: https://$URL"
+
+      - name: Summary
+        run: |
+          echo "## API Gateway Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Config ID | ${{ env.CONFIG_ID }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Gateway URL | ${{ steps.gateway-url.outputs.url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend URL | ${{ steps.backend-url.outputs.url }} |" >> $GITHUB_STEP_SUMMARY

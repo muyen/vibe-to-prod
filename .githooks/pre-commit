@@ -1,0 +1,80 @@
+#!/bin/bash
+# Pre-commit hook: runs before each commit
+# Install: git config core.hooksPath .githooks
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+FAILED=0
+
+# Check for secrets/keys in staged files
+echo -n "Checking for secrets... "
+if git diff --cached --diff-filter=ACM | grep -iE "(api[_-]?key|secret|password|token)\s*[:=]\s*['\"][^'\"]{8,}['\"]" > /dev/null 2>&1; then
+    echo -e "${RED}FAILED${NC}"
+    echo "Possible secrets detected in staged files!"
+    echo "Please review and remove any hardcoded secrets."
+    FAILED=1
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# Check for .env files being committed
+echo -n "Checking for .env files... "
+if git diff --cached --name-only | grep -E "^\.env$|^\.env\." | grep -v ".env.example" > /dev/null 2>&1; then
+    echo -e "${RED}FAILED${NC}"
+    echo ".env files should not be committed!"
+    FAILED=1
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# Go formatting (if Go files changed)
+if git diff --cached --name-only | grep -q "\.go$"; then
+    echo -n "Checking Go formatting... "
+    UNFORMATTED=$(gofmt -l $(git diff --cached --name-only --diff-filter=ACM | grep "\.go$") 2>/dev/null || true)
+    if [ -n "$UNFORMATTED" ]; then
+        echo -e "${RED}FAILED${NC}"
+        echo "Please run: gofmt -w $UNFORMATTED"
+        FAILED=1
+    else
+        echo -e "${GREEN}OK${NC}"
+    fi
+fi
+
+# Swift formatting check (if Swift files changed and swiftformat installed)
+if git diff --cached --name-only | grep -q "\.swift$"; then
+    if command -v swiftformat &> /dev/null; then
+        echo -n "Checking Swift formatting... "
+        if ! swiftformat --lint $(git diff --cached --name-only --diff-filter=ACM | grep "\.swift$") > /dev/null 2>&1; then
+            echo -e "${RED}FAILED${NC}"
+            echo "Please run: swiftformat ."
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    fi
+fi
+
+# Kotlin lint check (if Kotlin files changed)
+if git diff --cached --name-only | grep -q "\.kt$"; then
+    if [ -f "mobile/android/gradlew" ]; then
+        echo -n "Checking Kotlin lint... "
+        # Just warn, don't block (ktlint can be slow)
+        echo -e "${GREEN}SKIP${NC} (run manually: cd mobile/android && ./gradlew ktlintCheck)"
+    fi
+fi
+
+if [ $FAILED -ne 0 ]; then
+    echo ""
+    echo -e "${RED}Pre-commit checks failed!${NC}"
+    echo "Fix the issues above or use --no-verify to skip (not recommended)"
+    exit 1
+fi
+
+echo -e "${GREEN}All pre-commit checks passed!${NC}"

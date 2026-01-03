@@ -1,0 +1,123 @@
+openapi: 3.0.3
+info:
+  title: API
+  description: |
+    Your API description here.
+
+    This is the **source of truth** for your API. Edit this file first,
+    then run code generation to update backend and mobile clients.
+
+    Workflow:
+    1. Edit this file
+    2. Run: python scripts/openapi_workflow.py --full
+    3. Implement handlers
+    4. Run tests
+  version: 1.0.0
+  contact:
+    name: Your Team
+    url: https://yoursite.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+  - url: https://api.yoursite.com/api/v1
+    description: Production
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns API health status
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /hello:
+    get:
+      summary: Hello endpoint
+      description: Returns a greeting message
+      operationId: getHello
+      tags:
+        - Hello
+      parameters:
+        - name: name
+          in: query
+          description: Name to greet
+          required: false
+          schema:
+            type: string
+            default: World
+      responses:
+        '200':
+          description: Greeting response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HelloResponse'
+
+  # Add your endpoints here
+  # Example:
+  # /users:
+  #   get:
+  #     summary: List users
+  #     operationId: listUsers
+  #     ...
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+        version:
+          type: string
+          example: 1.0.0
+
+    HelloResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: Hello, World!
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Something went wrong
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token
+
+# Uncomment to require auth on all endpoints by default
+# security:
+#   - bearerAuth: []
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Hello
+    description: Hello world endpoints

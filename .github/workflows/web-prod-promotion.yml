@@ -1,0 +1,167 @@
+name: Web Production Promotion
+
+# Promote web app from dev to production
+# Uses Firebase Hosting's preview channel to validate before going live
+#
+# Pattern: Deploy to preview channel → Validate → Promote to live
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      preview_url:
+        description: 'Preview URL to promote (leave empty to use latest preview)'
+        required: false
+        type: string
+
+env:
+  # CUSTOMIZE: Your Firebase project IDs
+  FIREBASE_PROJECT_DEV: your-project-dev
+  FIREBASE_PROJECT_PROD: your-project-prod
+
+jobs:
+  validate:
+    name: Validate Preview
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    outputs:
+      channel_id: ${{ steps.get-channel.outputs.channel_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Get latest preview channel
+        id: get-channel
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          # List preview channels and get the latest
+          CHANNELS=$(firebase hosting:channel:list \
+            --project ${{ env.FIREBASE_PROJECT_DEV }} \
+            --json 2>/dev/null || echo '{"channels":[]}')
+
+          LATEST=$(echo "$CHANNELS" | jq -r '.channels | sort_by(.createTime) | last | .name // empty')
+
+          if [ -z "$LATEST" ]; then
+            echo "No preview channels found"
+            exit 1
+          fi
+
+          # Extract channel ID from full name
+          CHANNEL_ID=$(echo "$LATEST" | sed 's/.*\/channels\///')
+          echo "channel_id=$CHANNEL_ID" >> $GITHUB_OUTPUT
+          echo "Found preview channel: $CHANNEL_ID"
+
+      - name: Health check preview
+        run: |
+          PREVIEW_URL="https://${{ env.FIREBASE_PROJECT_DEV }}--${{ steps.get-channel.outputs.channel_id }}.web.app"
+          echo "Checking preview URL: $PREVIEW_URL"
+
+          for i in {1..3}; do
+            if curl -sf "$PREVIEW_URL" > /dev/null 2>&1; then
+              echo "Preview is healthy!"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+
+          echo "Preview health check failed"
+          exit 1
+
+  build-prod:
+    name: Build for Production
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: validate
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for production
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL_PROD }}
+          NODE_ENV: production
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build-prod
+          path: web/out/
+          retention-days: 1
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: build-prod
+    environment: production  # Requires approval if configured
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build-prod
+          path: web/out/
+
+      - name: Deploy to Firebase Hosting (Production)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+          projectId: ${{ env.FIREBASE_PROJECT_PROD }}
+          channelId: live
+
+  verify:
+    name: Verify Production
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    needs: deploy-prod
+
+    steps:
+      - name: Get production URL
+        id: url
+        run: |
+          # Production URL is typically the default hosting URL
+          URL="https://${{ env.FIREBASE_PROJECT_PROD }}.web.app"
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Health check production
+        run: |
+          URL="${{ steps.url.outputs.url }}"
+          echo "Checking production URL: $URL"
+
+          for i in {1..5}; do
+            if curl -sf "$URL" > /dev/null 2>&1; then
+              echo "Production is healthy!"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "Production health check failed"
+          exit 1
+
+      - name: Summary
+        run: |
+          echo "## Web Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Production URL | ${{ steps.url.outputs.url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validated Preview | ${{ needs.validate.outputs.channel_id }} |" >> $GITHUB_STEP_SUMMARY

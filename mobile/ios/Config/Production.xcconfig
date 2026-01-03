@@ -1,0 +1,4 @@
+// Production Configuration
+APP_ENVIRONMENT = production
+API_BASE_URL = https:/$()/api.example.com/api/v1
+APP_DISPLAY_NAME = App

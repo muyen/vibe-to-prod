@@ -1,0 +1,18 @@
+{
+  "id": "dev-environment",
+  "name": "Development",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "env",
+      "value": "dev",
+      "type": "default",
+      "enabled": true
+    }
+  ]
+}

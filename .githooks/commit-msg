@@ -1,0 +1,63 @@
+#!/bin/bash
+# Commit message hook: validates conventional commit format
+# Install: git config core.hooksPath .githooks
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+# Conventional commit pattern
+# type(optional-scope): description
+PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9-]+\))?: .{1,}"
+
+# Allow merge commits
+if echo "$COMMIT_MSG" | grep -qE "^Merge "; then
+    exit 0
+fi
+
+# Allow revert commits
+if echo "$COMMIT_MSG" | grep -qE "^Revert "; then
+    exit 0
+fi
+
+# Check first line matches pattern
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -n1)
+
+if ! echo "$FIRST_LINE" | grep -qE "$PATTERN"; then
+    echo -e "${RED}Invalid commit message format!${NC}"
+    echo ""
+    echo "Expected: type(scope): description"
+    echo ""
+    echo "Valid types:"
+    echo "  feat     - New feature"
+    echo "  fix      - Bug fix"
+    echo "  docs     - Documentation"
+    echo "  style    - Formatting (no code change)"
+    echo "  refactor - Code restructuring"
+    echo "  perf     - Performance improvement"
+    echo "  test     - Adding tests"
+    echo "  build    - Build system changes"
+    echo "  ci       - CI/CD changes"
+    echo "  chore    - Maintenance"
+    echo "  revert   - Revert previous commit"
+    echo ""
+    echo "Examples:"
+    echo "  feat: add user authentication"
+    echo "  fix(backend): resolve login timeout"
+    echo "  docs: update README"
+    echo ""
+    echo "Your message: $FIRST_LINE"
+    exit 1
+fi
+
+# Check description length (warn if too long)
+DESC_LENGTH=$(echo "$FIRST_LINE" | wc -c)
+if [ "$DESC_LENGTH" -gt 72 ]; then
+    echo -e "${RED}Warning:${NC} First line is $DESC_LENGTH chars (recommended: 72 max)"
+fi
+
+echo -e "${GREEN}Commit message format OK${NC}"

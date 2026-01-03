@@ -1,0 +1,163 @@
+# Automated Rollback Workflow
+# Triggered manually when a deployment needs to be rolled back
+
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - development
+          - production
+      service:
+        description: 'Service to rollback'
+        required: true
+        type: choice
+        options:
+          - backend
+          - web
+      revision:
+        description: 'Target revision (leave empty for previous)'
+        required: false
+        type: string
+      confirm:
+        description: 'Type ROLLBACK to confirm'
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate Rollback Request
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.validate.outputs.proceed }}
+
+    steps:
+      - name: Validate confirmation
+        id: validate
+        run: |
+          if [ "${{ inputs.confirm }}" != "ROLLBACK" ]; then
+            echo "::error::Confirmation text must be 'ROLLBACK'"
+            echo "proceed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "proceed=true" >> $GITHUB_OUTPUT
+
+  rollback-backend:
+    name: Rollback Backend
+    needs: validate
+    if: ${{ needs.validate.outputs.proceed == 'true' && inputs.service == 'backend' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get current and previous revisions
+        id: revisions
+        run: |
+          SERVICE_NAME="${{ inputs.environment == 'production' && 'backend-prod' || 'backend-dev' }}"
+          REGION="${{ vars.GCP_REGION || 'us-central1' }}"
+          PROJECT="${{ vars.GCP_PROJECT }}"
+
+          # Get revisions
+          REVISIONS=$(gcloud run revisions list \
+            --service=$SERVICE_NAME \
+            --region=$REGION \
+            --project=$PROJECT \
+            --format="value(name)" \
+            --limit=5)
+
+          CURRENT=$(echo "$REVISIONS" | head -1)
+          PREVIOUS=$(echo "$REVISIONS" | head -2 | tail -1)
+          TARGET="${{ inputs.revision || env.PREVIOUS }}"
+
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "target=${TARGET:-$PREVIOUS}" >> $GITHUB_OUTPUT
+
+      - name: Rollback to target revision
+        run: |
+          SERVICE_NAME="${{ inputs.environment == 'production' && 'backend-prod' || 'backend-dev' }}"
+          REGION="${{ vars.GCP_REGION || 'us-central1' }}"
+          PROJECT="${{ vars.GCP_PROJECT }}"
+
+          echo "Rolling back $SERVICE_NAME to ${{ steps.revisions.outputs.target }}"
+
+          gcloud run services update-traffic $SERVICE_NAME \
+            --to-revisions=${{ steps.revisions.outputs.target }}=100 \
+            --region=$REGION \
+            --project=$PROJECT
+
+      - name: Verify rollback
+        run: |
+          SERVICE_NAME="${{ inputs.environment == 'production' && 'backend-prod' || 'backend-dev' }}"
+          REGION="${{ vars.GCP_REGION || 'us-central1' }}"
+          PROJECT="${{ vars.GCP_PROJECT }}"
+
+          # Get service URL
+          URL=$(gcloud run services describe $SERVICE_NAME \
+            --region=$REGION \
+            --project=$PROJECT \
+            --format="value(status.url)")
+
+          # Health check
+          curl -f "$URL/health" || exit 1
+          echo "Rollback successful - health check passed"
+
+  rollback-web:
+    name: Rollback Web
+    needs: validate
+    if: ${{ needs.validate.outputs.proceed == 'true' && inputs.service == 'web' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Rollback Firebase Hosting
+        run: |
+          SITE="${{ inputs.environment == 'production' && vars.FIREBASE_SITE_PROD || vars.FIREBASE_SITE_DEV }}"
+
+          # List recent versions
+          firebase hosting:versions:list --site=$SITE --limit=5
+
+          # Note: Firebase rollback requires version ID
+          # For now, we redeploy previous version from git
+          echo "::warning::Firebase Hosting rollback requires manual version selection"
+          echo "Use: firebase hosting:clone SOURCE_SITE:SOURCE_VERSION TARGET_SITE:live"
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+  notify:
+    name: Notify Rollback
+    needs: [rollback-backend, rollback-web]
+    if: always() && (needs.rollback-backend.result == 'success' || needs.rollback-web.result == 'success')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create rollback summary
+        run: |
+          echo "## Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service**: ${{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Initiated by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,7 @@
+# Development environment configuration
+# Run: pulumi config set gcp:project YOUR_DEV_PROJECT_ID --stack dev
+
+config:
+  gcp:region: us-central1
+  app-infrastructure:environment: dev
+  app-infrastructure:appName: app
