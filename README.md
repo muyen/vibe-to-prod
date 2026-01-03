@@ -82,6 +82,46 @@ You can vibe code features in hours. But shipping to production? That's weeks of
 └────────────────────────────────────────────────────────────┘
 ```
 
+### Third-Party Services
+
+| Service | Purpose | Why This Choice |
+|---------|---------|-----------------|
+| **Google Cloud Run** | Backend hosting | Serverless, scales to zero, pay-per-use |
+| **Firebase Auth** | Authentication | Easy mobile SDKs, Google/Apple sign-in |
+| **Firestore** | Database | NoSQL, real-time sync, generous free tier |
+| **Artifact Registry** | Docker images | Private container registry on GCP |
+| **GitHub Actions** | CI/CD | Free for public repos, easy secrets management |
+
+### Deployment Environments
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    TWO-ENVIRONMENT SETUP                     │
+│                                                              │
+│   ┌─────────────┐         ┌─────────────┐                   │
+│   │     DEV     │         │    PROD     │                   │
+│   │ api-dev.app │         │  api.app    │                   │
+│   └──────┬──────┘         └──────┬──────┘                   │
+│          │                       │                          │
+│          ▼                       ▼                          │
+│   ┌─────────────┐         ┌─────────────┐                   │
+│   │  Cloud Run  │         │  Cloud Run  │                   │
+│   │  (dev proj) │         │ (prod proj) │                   │
+│   └─────────────┘         └─────────────┘                   │
+│                                                              │
+│   Push to main ──▶ Auto-deploy to DEV                       │
+│   Manual promote ──▶ Same image to PROD                     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Environment | Triggered By | Purpose |
+|-------------|--------------|---------|
+| **Development** | Push to `main` | Test changes, integration testing |
+| **Production** | Manual promotion | Live users, stable releases |
+
+The same Docker image is promoted from dev to prod - no rebuild, ensuring parity.
+
 ---
 
 ## Built for Claude Code
