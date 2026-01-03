@@ -53,14 +53,28 @@ This document explains the GitHub Actions workflows included in this template.
 
 ## Workflow Files
 
+> **Note**: All automatic triggers are **disabled by default** to save GitHub Actions minutes.
+> Workflows use `workflow_dispatch` (manual trigger only). Uncomment trigger blocks in each
+> workflow file when ready to enable automatic CI/CD.
+
 | File | Trigger | Purpose |
 |------|---------|---------|
-| `backend-ci.yml` | Push/PR on `backend/**` | Build, test, lint Go code |
-| `ios-ci.yml` | Push/PR on `mobile/ios/**` | Build, test iOS app |
-| `android-ci.yml` | Push/PR on `mobile/android/**` | Build, test Android app |
-| `deploy-cloudrun.yml` | Push to main, manual | Deploy backend to Cloud Run (dev) |
-| `prod-promotion.yml` | Manual only | Promote tested image to production |
-| `security.yml` | Push to main, weekly | Security scanning |
+| **Backend** | | |
+| `backend-ci.yml` | Manual | Build, test, lint Go code |
+| `deploy-cloudrun.yml` | Manual | Deploy backend to Cloud Run |
+| `prod-promotion.yml` | Manual | Promote tested backend image to production |
+| **Web** | | |
+| `web-ci.yml` | Manual | Web CI trigger (calls web-cicd.yml) |
+| `web-cicd.yml` | Reusable | Web CI/CD pipeline (build, test, deploy) |
+| `deploy-web.yml` | Manual | Deploy web app to Firebase Hosting |
+| `web-prod-promotion.yml` | Manual | Promote web app to production |
+| **Infrastructure** | | |
+| `deploy-api-gateway.yml` | Manual | Deploy API Gateway config (OpenAPI v2) |
+| `infrastructure-deploy.yml` | Manual | Deploy Pulumi infrastructure |
+| **Testing** | | |
+| `e2e-tests.yml` | Manual | E2E regression tests (Playwright + Newman) |
+| **Security** | | |
+| `security.yml` | Manual | Security scanning (gosec, govulncheck, Trivy) |
 
 ---
 
@@ -617,12 +631,247 @@ jobs:
 
 ---
 
+## Web Deployment (`deploy-web.yml`)
+
+Deploy Next.js web app to Firebase Hosting.
+
+```yaml
+jobs:
+  build:
+    - npm ci
+    - npm run build
+    - Upload artifacts
+
+  deploy:
+    - Download build artifacts
+    - Deploy to Firebase Hosting
+```
+
+**Usage:**
+```bash
+# Deploy to dev
+gh workflow run deploy-web.yml -f environment=dev
+
+# Deploy to prod
+gh workflow run deploy-web.yml -f environment=prod
+```
+
+---
+
+## Web Production Promotion (`web-prod-promotion.yml`)
+
+Promote validated web app from dev preview to production.
+
+```yaml
+jobs:
+  validate:
+    - Get latest preview channel
+    - Health check preview
+
+  build-prod:
+    - Build with production env vars
+
+  deploy-prod:
+    - Deploy to Firebase Hosting (live channel)
+
+  verify:
+    - Health check production
+```
+
+---
+
+## API Gateway Deployment (`deploy-api-gateway.yml`)
+
+Deploy Google Cloud API Gateway configuration.
+
+**Why This Workflow:**
+- API Gateway requires **OpenAPI v2 (Swagger 2.0)** format
+- Automatically converts OpenAPI v3 → v2
+- Updates gateway with new API config
+
+```yaml
+jobs:
+  convert-spec:
+    - Convert OpenAPI v3 to v2 (api-spec-converter)
+    - Validate converted spec
+
+  deploy:
+    - Create API config from OpenAPI spec
+    - Update gateway with new config
+    - Verify deployment
+```
+
+**Usage:**
+```bash
+# Deploy to dev
+gh workflow run deploy-api-gateway.yml -f environment=dev
+
+# Deploy to prod
+gh workflow run deploy-api-gateway.yml -f environment=prod
+```
+
+**Prerequisites:**
+1. Enable API Gateway in GCP Console
+2. Create initial API and Gateway resources
+3. Set up Workload Identity Federation
+
+---
+
+## Enabling Automatic Triggers
+
+All workflows are set to `workflow_dispatch` only by default. To enable automatic triggers:
+
+1. **Open the workflow file** (e.g., `.github/workflows/backend-ci.yml`)
+2. **Uncomment the trigger block**:
+   ```yaml
+   # Before (disabled):
+   # on:
+   #   push:
+   #     branches: [main]
+   #   pull_request:
+   #     branches: [main]
+
+   on:
+     workflow_dispatch:  # Manual only
+
+   # After (enabled):
+   on:
+     push:
+       branches: [main]
+     pull_request:
+       branches: [main]
+     workflow_dispatch:  # Keep for manual runs
+   ```
+3. **Commit and push** the changes
+
+---
+
+## E2E Regression Tests (`e2e-tests.yml`)
+
+**Trigger:** Manual only (workflow_dispatch)
+
+Run comprehensive E2E tests before releases or after major changes.
+
+```yaml
+jobs:
+  e2e-regression:
+    - Install Playwright and dependencies
+    - Run API tests (Newman/Postman)
+    - Run E2E tests (Playwright)
+    - Upload test artifacts
+
+  smoke-test-production:
+    - Run smoke tests against production
+    - Only when environment=production
+```
+
+**Usage:**
+```bash
+# Test against development
+gh workflow run e2e-tests.yml -f environment=development
+
+# Test against production
+gh workflow run e2e-tests.yml -f environment=production
+
+# Run tests in parallel
+gh workflow run e2e-tests.yml -f parallel=true
+```
+
+**Artifacts Generated:**
+- `playwright-report/` - HTML test report
+- `playwright-results.json` - Test results JSON
+- `newman-results.json` - API test results
+- `test-screenshots/` - Screenshots on failure
+
+---
+
+## Infrastructure Deploy (`infrastructure-deploy.yml`)
+
+**Trigger:** Manual only (workflow_dispatch)
+
+Deploy infrastructure changes via Pulumi. Designed for infrequent, high-stakes changes.
+
+```yaml
+jobs:
+  changes:
+    - Detect what changed (shared code vs env config)
+    - Determine which environments to deploy
+
+  deploy-dev:
+    - Authenticate to GCP
+    - Pulumi preview or up (development stack)
+
+  deploy-prod:
+    - Authenticate to GCP
+    - Pulumi preview or up (production stack)
+```
+
+**Usage:**
+```bash
+# Preview changes (no apply)
+gh workflow run infrastructure-deploy.yml -f preview_only=true
+
+# Deploy to development
+gh workflow run infrastructure-deploy.yml -f environment=development
+
+# Deploy to production
+gh workflow run infrastructure-deploy.yml -f environment=production
+
+# Deploy to both
+gh workflow run infrastructure-deploy.yml -f environment=both
+```
+
+**Required Secrets:**
+| Secret | Description |
+|--------|-------------|
+| `PULUMI_CONFIG_PASSPHRASE` | Passphrase for Pulumi state encryption |
+| `GCP_SA_KEY_INFRA` | Service account key for infrastructure changes |
+
+**Note:** For most infrastructure changes, running `pulumi up` locally is faster and allows interactive review.
+
+---
+
+## Web CI/CD Pipeline (`web-cicd.yml`)
+
+**Type:** Reusable workflow (called by `web-ci.yml` and `web-prod-promotion.yml`)
+
+Comprehensive CI/CD pipeline for Next.js web apps deployed to Firebase Hosting.
+
+```yaml
+jobs:
+  changes:
+    - Detect web folder changes
+    - Decide if deploy is needed
+
+  web-ci:
+    - Install dependencies
+    - Type check, lint, format check (parallel)
+    - Run unit tests
+    - Build for Firebase
+    - Upload build artifacts
+
+  web-deploy-hosting:
+    - Deploy static hosting only (~1 min)
+    - For static-only changes
+
+  web-deploy-all:
+    - Deploy hosting + functions (~5 min)
+    - For SSR routes
+```
+
+**Deploy Modes:**
+- `hosting_only` - Static files only, fast (~1 min)
+- `all` - Hosting + Cloud Functions, full SSR support (~5 min)
+
+---
+
 ## Related Documentation
 
 - [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md) - All secrets needed
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Why these technologies
 - [API_GATEWAY.md](API_GATEWAY.md) - Auth architecture
+- [OPENAPI_WORKFLOW.md](OPENAPI_WORKFLOW.md) - API-first development workflow
 
 ---
 
-*Last updated: 2026-01-02*
+*Last updated: 2026-01-03*

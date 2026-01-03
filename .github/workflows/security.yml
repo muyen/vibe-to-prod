@@ -8,14 +8,20 @@
 
 name: Security Scan
 
+# TRIGGERS DISABLED to save GitHub Actions minutes
+# Uncomment when ready to enable automatic security scans:
+#
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#     branches: [main]
+#   schedule:
+#     # Run weekly on Sunday at midnight
+#     - cron: '0 0 * * 0'
+
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    # Run weekly on Sunday at midnight
-    - cron: '0 0 * * 0'
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   # Go Security Scan

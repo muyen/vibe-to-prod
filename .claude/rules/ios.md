@@ -25,6 +25,9 @@ mobile/ios/
 │   ├── App.swift         # App entry point
 │   ├── ContentView.swift # Main view
 │   └── Info.plist        # App configuration
+├── AppTests/             # XCTest unit tests
+│   ├── AppTests.swift    # Sample test file
+│   └── Info.plist        # Test bundle config
 ├── Generated/            # Generated API client (DO NOT EDIT)
 ├── Makefile              # Build commands
 └── fastlane/             # App Store automation

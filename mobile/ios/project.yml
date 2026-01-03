@@ -35,12 +35,33 @@ targets:
         PRODUCT_NAME: App
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
+  AppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AppTests
+        name: AppTests
+        type: group
+    dependencies:
+      - target: App
+    settings:
+      base:
+        INFOPLIST_FILE: AppTests/Info.plist
+        PRODUCT_NAME: AppTests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/App"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
 schemes:
   App:
     build:
       targets:
         App: all
+        AppTests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - AppTests
     archive:
       config: Release

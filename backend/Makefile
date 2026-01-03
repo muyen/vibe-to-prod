@@ -90,6 +90,17 @@ vuln-check:
 # Run all security checks
 security: security-scan vuln-check
 
+# === DOCUMENTATION ===
+
+# Generate API docs (requires @redocly/cli)
+docs:
+	@../scripts/generate-api-docs.sh
+
+# Serve API docs locally
+docs-serve:
+	@echo "Serving API docs at http://localhost:8000"
+	@cd api/docs && python3 -m http.server 8000
+
 # Help
 help:
 	@echo "Available targets:"
@@ -115,6 +126,10 @@ help:
 	@echo "    security-scan - Run gosec security scanner"
 	@echo "    vuln-check    - Run govulncheck vulnerability scan"
 	@echo "    security      - Run all security checks"
+	@echo ""
+	@echo "  DOCUMENTATION:"
+	@echo "    docs          - Generate API docs from OpenAPI"
+	@echo "    docs-serve    - Serve API docs locally"
 	@echo ""
 	@echo "  OTHER:"
 	@echo "    clean         - Clean build artifacts"

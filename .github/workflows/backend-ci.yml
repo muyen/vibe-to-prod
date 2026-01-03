@@ -1,14 +1,20 @@
 name: Backend CI
 
+# TRIGGERS DISABLED to save GitHub Actions minutes
+# Uncomment when ready to enable automatic CI:
+#
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'backend/**'
+#   pull_request:
+#     branches: [main]
+#     paths:
+#       - 'backend/**'
+
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'backend/**'
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   test:

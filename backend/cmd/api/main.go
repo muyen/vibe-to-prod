@@ -37,7 +37,7 @@ func NewLogger() (*zap.Logger, error) {
 }
 
 // NewEchoServer creates and configures the Echo server with middleware
-// Pattern matches proofmi: Recover, CORS, Security Headers, RequestID, Logging
+// Production middleware stack: Recover, CORS, Security Headers, RequestID, Logging
 func NewEchoServer(logger *zap.Logger) *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
@@ -52,7 +52,7 @@ func NewEchoServer(logger *zap.Logger) *echo.Echo {
 	// 2. Request logging
 	e.Use(middleware.Logger())
 
-	// 3. CORS - Cross-Origin Resource Sharing (matches proofmi pattern)
+	// 3. CORS - Cross-Origin Resource Sharing
 	allowedOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
 	if allowedOrigins == "" {
 		if isProduction {
@@ -63,7 +63,7 @@ func NewEchoServer(logger *zap.Logger) *echo.Echo {
 		}
 	}
 
-	// Create origin lookup map for O(1) checking (matches proofmi)
+	// Create origin lookup map for O(1) checking
 	allowedOriginMap := make(map[string]bool)
 	for _, origin := range strings.Split(allowedOrigins, ",") {
 		allowedOriginMap[strings.TrimSpace(origin)] = true
@@ -90,7 +90,7 @@ func NewEchoServer(logger *zap.Logger) *echo.Echo {
 		}
 	})
 
-	// 4. Security headers (matches proofmi pattern - OWASP A05:2021)
+	// 4. Security headers (OWASP A05:2021 - Security Misconfiguration)
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// X-Content-Type-Options: Prevent MIME type sniffing

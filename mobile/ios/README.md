@@ -35,6 +35,19 @@ ios/
 └── README.md
 ```
 
+## Why XcodeGen + project.yml?
+
+Xcode's `.xcodeproj` files are notoriously difficult to manage:
+- **Merge conflicts**: Binary-like format causes constant Git conflicts
+- **AI unfriendly**: Hard for AI assistants to add/remove source files
+- **Manual file management**: Adding a Swift file requires clicking through Xcode UI
+
+**Solution**: Use [XcodeGen](https://github.com/yonaskolb/XcodeGen) with `project.yml`:
+- **Text-based**: Simple YAML that Git can merge cleanly
+- **Auto-discovery**: New files in `App/` are automatically included
+- **AI friendly**: Easy for AI assistants to read and modify
+- **Reproducible**: `make generate` regenerates the project from scratch
+
 ## Key Points
 
 - **XcodeGen** generates `.xcodeproj` from `project.yml`

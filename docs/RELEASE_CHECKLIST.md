@@ -166,11 +166,11 @@ The following security middleware is configured in `backend/cmd/api/main.go`:
 | **Recover** | Prevents server crash on panic | Echo built-in |
 | **Logger** | Request logging | Echo built-in |
 | **CORS** | Cross-origin requests | Configured via `CORS_ALLOWED_ORIGINS` |
-| **Security Headers** | XSS, HSTS, CSP, etc. | Custom middleware (matches proofmi) |
+| **Security Headers** | XSS, HSTS, CSP, etc. | Custom middleware (OWASP A05:2021) |
 | **RequestID** | Request tracing | Auto-generates UUID |
 | **Structured Logging** | Audit trail | Method, path, status, latency, IP |
 
-**Note**: Rate limiting and request timeouts are configured at the **API Gateway level** (e.g., GCP API Gateway, Firebase App Check) rather than in the backend directly. This follows the proofmi production pattern.
+**Note**: Rate limiting and request timeouts are configured at the **API Gateway level** (e.g., GCP API Gateway, Firebase App Check) rather than in the backend directly. This follows production best practices.
 
 ---
 

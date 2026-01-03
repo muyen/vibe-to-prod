@@ -1,11 +1,26 @@
 name: Deploy to Cloud Run
 
+# TRIGGERS DISABLED to save GitHub Actions minutes
+# Uncomment when ready to enable automatic deploys:
+#
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'backend/**'
+#   workflow_dispatch:
+#     inputs:
+#       environment:
+#         description: 'Environment to deploy to'
+#         required: true
+#         default: 'dev'
+#         type: choice
+#         options:
+#           - dev
+#           - prod
+
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger only
     inputs:
       environment:
         description: 'Environment to deploy to'

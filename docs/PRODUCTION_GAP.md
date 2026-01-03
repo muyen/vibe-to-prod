@@ -200,7 +200,7 @@
 - CI/CD pipelines with production promotion
 - Infrastructure as code
 - Security scanning (gosec, govulncheck, Trivy)
-- Security middleware (headers, CORS - matches proofmi pattern)
+- Security middleware (headers, CORS)
 - Structured logging
 
 **Good start (◐):**

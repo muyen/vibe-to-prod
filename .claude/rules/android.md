@@ -22,12 +22,17 @@ These rules apply when working on Android code.
 mobile/android/
 ├── app/
 │   ├── build.gradle.kts          # App module config
-│   └── src/main/
-│       ├── kotlin/com/example/app/
-│       │   ├── MainActivity.kt   # Entry point
-│       │   └── ui/               # Compose screens
-│       ├── res/                  # Resources
-│       └── AndroidManifest.xml   # App manifest
+│   └── src/
+│       ├── main/
+│       │   ├── kotlin/com/example/app/
+│       │   │   ├── MainActivity.kt   # Entry point
+│       │   │   └── ui/               # Compose screens
+│       │   ├── res/                  # Resources
+│       │   └── AndroidManifest.xml   # App manifest
+│       ├── test/                     # Unit tests (JUnit)
+│       │   └── kotlin/com/example/app/
+│       └── androidTest/              # Instrumented tests
+│           └── kotlin/com/example/app/
 ├── build.gradle.kts              # Root config
 ├── settings.gradle.kts           # Module settings
 ├── Makefile                      # Build commands

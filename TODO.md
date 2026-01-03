@@ -1,6 +1,6 @@
 # TODO - Automation & Features to Port
 
-> Items to port from proofmi or add for production readiness.
+> Items to add for production readiness.
 
 ## High Priority
 
@@ -12,7 +12,7 @@
 - [ ] **Fresh clone test** - Clone to new folder, test with fresh AI session
 - [ ] **Claude project configuration** - Verify MCP servers, tools, settings work
 
-### Automation (from proofmi)
+### Automation
 - [x] **Pre-commit formatting** - Auto-format on commit (Go formatting in pre-commit hook)
 - [x] **Dependabot config** - Auto dependency updates
 - [x] **GitHub PR template** - Consistent PR descriptions
@@ -22,14 +22,17 @@
 - [x] **Local runner toggle script** - Switch between GitHub-hosted and self-hosted runners
 - [x] **Playwright E2E tests** - Browser-based E2E testing (in automation/)
 - [x] **Postman collections** - API testing collections (in automation/)
+- [x] **Web CI/CD pipeline** - Reusable web-cicd.yml workflow
+- [x] **E2E tests workflow** - e2e-tests.yml for Playwright + Newman
+- [x] **Infrastructure deploy workflow** - infrastructure-deploy.yml for Pulumi
 
 ### Testing
-- [ ] **iOS XCTest setup** - Add test target to project.yml
-- [ ] **Android JUnit setup** - Add test dependencies
+- [x] **iOS XCTest setup** - Add test target to project.yml
+- [x] **Android JUnit setup** - Add test dependencies
 - [ ] **Load testing** - k6 setup
 
 ### Security
-- [x] **Security headers** - CORS, CSP, XSS, HSTS configured (matches proofmi)
+- [x] **Security headers** - CORS, CSP, XSS, HSTS configured
 - [x] **Release checklist** - docs/RELEASE_CHECKLIST.md
 - [ ] **API key rotation** - Document process
 - [ ] **Rate limiting** - Configure at API Gateway level
@@ -38,7 +41,7 @@
 ## Medium Priority
 
 ### Documentation
-- [ ] **API documentation** - Generate from OpenAPI
+- [x] **API documentation** - Generate from OpenAPI (`make docs` in backend/)
 - [ ] **Changelog automation** - From conventional commits
 
 ### Mobile
@@ -67,6 +70,10 @@
 - [x] Runner toggle support in all workflows (RUNNER_LABEL variable)
 - [x] Fixed security.yml for private repos (removed CodeQL/SARIF)
 - [x] Deploy workflow with git-sha labels for traceability
+- [x] Web deploy workflow (.github/workflows/deploy-web.yml)
+- [x] Web prod promotion workflow (.github/workflows/web-prod-promotion.yml)
+- [x] API Gateway deploy workflow (.github/workflows/deploy-api-gateway.yml)
+- [x] All triggers disabled by default (manual workflow_dispatch only)
 
 ### Automation
 - [x] Git hooks (pre-commit, commit-msg, pre-push)
@@ -97,7 +104,7 @@
 - [x] Secrets documentation in .env.example
 - [x] Pre-commit hook blocks .env and secrets
 - [x] .gitignore covers sensitive files
-- [x] Security middleware in backend (headers, CORS - matches proofmi pattern)
+- [x] Security middleware in backend (headers, CORS)
 - [x] RELEASE_CHECKLIST.md - Pre-deployment verification guide
 
 ---
@@ -108,8 +115,6 @@
 
 | Category | Item | Priority |
 |----------|------|----------|
-| **Testing** | iOS XCTest | Medium |
-| **Testing** | Android JUnit | Medium |
 | **Testing** | k6 load tests | Low |
 | **Mobile** | Force update mechanism | Medium |
 | **Mobile** | Push notifications | Medium |
@@ -119,6 +124,11 @@
 
 | Category | Item |
 |----------|------|
+| **CI/CD** | web-ci.yml + web-cicd.yml (reusable web pipeline) |
+| **CI/CD** | e2e-tests.yml (Playwright + Newman E2E workflow) |
+| **CI/CD** | infrastructure-deploy.yml (Pulumi deployment) |
+| **Testing** | iOS XCTest setup (project.yml + AppTests/) |
+| **Testing** | Android JUnit setup (test dependencies + sample tests) |
 | **Folders** | `automation/` - Playwright + Postman E2E testing |
 | **Folders** | `web/` - Next.js + Firebase Hosting (static + dynamic) |
 | **Testing** | Playwright E2E scaffolding |

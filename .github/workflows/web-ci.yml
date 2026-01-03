@@ -1,0 +1,55 @@
+# Web App CI/CD Trigger
+# TRIGGERS DISABLED to save GitHub Actions minutes
+# Uncomment push/pull_request triggers when ready
+
+name: Web App
+
+permissions:
+  contents: read
+  pull-requests: read
+
+on:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'web/**'
+  #     - '.github/workflows/web-ci.yml'
+  #     - '.github/workflows/web-cicd.yml'
+  # pull_request:
+  #   branches: [main]
+  #   paths:
+  #     - 'web/**'
+  #     - '.github/workflows/web-ci.yml'
+  #     - '.github/workflows/web-cicd.yml'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use'
+        required: true
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+        - ubuntu-latest
+        - self-hosted
+      deploy:
+        description: 'Deploy to development after tests'
+        required: true
+        default: true
+        type: boolean
+      # Production deployment: use "Web Production Promotion" workflow instead
+
+jobs:
+  # Development CI/CD - auto deploys on push to main
+  dev:
+    name: Development
+    uses: ./.github/workflows/web-cicd.yml
+    with:
+      runner: ${{ inputs.runner || vars.RUNNER_LABEL || 'ubuntu-latest' }}
+      environment: 'development'
+      run_tests: true
+      deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
+    secrets:
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_DEV }}
+
+  # Production deployment is done via manual workflow:
+  # .github/workflows/web-prod-promotion.yml

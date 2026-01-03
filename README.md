@@ -317,8 +317,8 @@ See [PRODUCTION_GAP.md](docs/PRODUCTION_GAP.md) for the full checklist.
 |-----------------|------------|-------------|
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | [PRODUCTION_GAP.md](docs/PRODUCTION_GAP.md) | [AI_BOOTSTRAP.md](docs/AI_BOOTSTRAP.md) |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | [RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) | [AI_WORKFLOW.md](docs/AI_WORKFLOW.md) |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | [SCALING.md](docs/SCALING.md) | [CLAUDE.md](CLAUDE.md) |
-| | [CICD.md](docs/CICD.md) | |
+| [OPENAPI_WORKFLOW.md](docs/OPENAPI_WORKFLOW.md) | [SCALING.md](docs/SCALING.md) | [CLAUDE.md](CLAUDE.md) |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | [CICD.md](docs/CICD.md) | |
 
 ---
 
