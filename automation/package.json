@@ -1,0 +1,20 @@
+{
+  "name": "automation",
+  "version": "1.0.0",
+  "description": "E2E and API testing automation",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:api": "newman run postman/collections/api-tests.json -e postman/environments/dev.json",
+    "test:api:prod": "newman run postman/collections/api-tests.json -e postman/environments/prod.json",
+    "report": "playwright show-report reports/playwright"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "newman": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

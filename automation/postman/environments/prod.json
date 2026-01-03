@@ -1,0 +1,18 @@
+{
+  "id": "prod-environment",
+  "name": "Production",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.yourapp.com",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "env",
+      "value": "prod",
+      "type": "default",
+      "enabled": true
+    }
+  ]
+}

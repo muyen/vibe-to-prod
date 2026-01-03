@@ -61,7 +61,7 @@ You can vibe code features in hours. But shipping to production? That's weeks of
 │                        FRONTEND                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │     iOS      │  │   Android    │  │     Web      │      │
-│  │ Swift/SwiftUI│  │Kotlin/Compose│  │   (planned)  │      │
+│  │ Swift/SwiftUI│  │Kotlin/Compose│  │  Next.js     │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 ├────────────────────────────────────────────────────────────┤
 │                        BACKEND                              │
@@ -72,7 +72,7 @@ You can vibe code features in hours. But shipping to production? That's weeks of
 │                     INFRASTRUCTURE                          │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │  Cloud Run   │  │    Pulumi    │  │   Firebase   │      │
-│  │  (hosting)   │  │    (IaC)     │  │  (auth/db)   │      │
+│  │ (backend)    │  │    (IaC)     │  │ (auth/db/web)│      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 ├────────────────────────────────────────────────────────────┤
 │                        CI/CD                                │
@@ -80,6 +80,24 @@ You can vibe code features in hours. But shipping to production? That's weeks of
 │  │  GitHub Actions  │  Security Scans  │  Auto Deploy  │   │
 │  └─────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────┘
+```
+
+### Web Architecture: Static + Dynamic
+
+The web frontend uses **Firebase Hosting with Cloud Functions** for SSR:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Firebase Hosting (Web)                     │
+│                                                              │
+│   Static Assets (CDN)          Dynamic Routes (Functions)   │
+│   ┌─────────────────┐          ┌─────────────────────┐      │
+│   │ Images, CSS/JS  │  ───►    │ Server-side render  │      │
+│   │ Static pages    │          │ Dynamic pages       │      │
+│   └─────────────────┘          └─────────────────────┘      │
+│                                                              │
+│   Fast global CDN              Serverless, scales to zero   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Third-Party Services
@@ -268,9 +286,16 @@ See [PRODUCTION_GAP.md](docs/PRODUCTION_GAP.md) for the full checklist.
 │   ├── internal/           # Business logic
 │   ├── Makefile            # build, test, run, lint
 │   └── Dockerfile          # Production container
+├── web/                     # Next.js web application
+│   ├── src/app/            # App Router pages
+│   ├── firebase.json       # Firebase Hosting config
+│   └── Makefile            # deploy-dev, deploy-prod
 ├── mobile/
 │   ├── ios/                # Swift/SwiftUI + Fastlane
 │   └── android/            # Kotlin/Compose + Fastlane
+├── automation/              # E2E testing
+│   ├── playwright/         # Browser tests
+│   └── postman/            # API tests
 ├── infrastructure/
 │   └── pulumi/             # Cloud Run, networking, IAM
 ├── .github/

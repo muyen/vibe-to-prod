@@ -5,8 +5,8 @@
 ## High Priority
 
 ### Missing Folders
-- [ ] **automation/** - E2E testing folder (Playwright, Postman, mobile tests)
-- [ ] **web/** - Web frontend scaffolding (React/Next.js)
+- [x] **automation/** - E2E testing folder (Playwright, Postman)
+- [x] **web/** - Web frontend scaffolding (Next.js + Firebase Hosting)
 
 ### Bootstrap & Onboarding
 - [ ] **Fresh clone test** - Clone to new folder, test with fresh AI session
@@ -20,8 +20,8 @@
 - [x] **Workflow validation script** - Validates GitHub Actions workflows
 - [x] **Production promotion pipeline** - Deploy tested image from dev to prod
 - [x] **Local runner toggle script** - Switch between GitHub-hosted and self-hosted runners
-- [ ] **Playwright E2E tests** - Browser-based E2E testing (in automation/)
-- [ ] **Postman collections** - API testing collections (in automation/)
+- [x] **Playwright E2E tests** - Browser-based E2E testing (in automation/)
+- [x] **Postman collections** - API testing collections (in automation/)
 
 ### Testing
 - [ ] **iOS XCTest setup** - Add test target to project.yml
@@ -108,13 +108,18 @@
 
 | Category | Item | Priority |
 |----------|------|----------|
-| **Folders** | `automation/` (E2E tests) | High |
-| **Folders** | `web/` (frontend) | High |
-| **Testing** | Playwright E2E | High |
-| **Testing** | Postman collections | Medium |
 | **Testing** | iOS XCTest | Medium |
 | **Testing** | Android JUnit | Medium |
 | **Testing** | k6 load tests | Low |
 | **Mobile** | Force update mechanism | Medium |
 | **Mobile** | Push notifications | Medium |
 | **Infra** | Database migrations | Medium |
+
+## Recently Completed
+
+| Category | Item |
+|----------|------|
+| **Folders** | `automation/` - Playwright + Postman E2E testing |
+| **Folders** | `web/` - Next.js + Firebase Hosting (static + dynamic) |
+| **Testing** | Playwright E2E scaffolding |
+| **Testing** | Postman API test collections |
