@@ -107,7 +107,7 @@ jobs:
           fi
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ steps.project.outputs.wif_provider }}
           service_account: ${{ steps.project.outputs.wif_sa }}
