@@ -24,6 +24,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/openapi-changed.sh \"$CLAUDE_TOOL_INPUT_FILE_PATH\"",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   },
   "env": {

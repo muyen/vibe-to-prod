@@ -1,0 +1,12 @@
+# oapi-codegen configuration
+# Generates Go types and server interfaces from OpenAPI spec
+#
+# Install: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+# Run: oapi-codegen -config api/oapi-codegen.yaml api/openapi.yaml
+
+package: generated
+output: internal/generated/api.go
+generate:
+  echo-server: true
+  models: true
+  embedded-spec: true
