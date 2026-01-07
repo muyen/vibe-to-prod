@@ -1,0 +1,29 @@
+{
+  "name": "vibe-to-prod",
+  "owner": {
+    "name": "muyen",
+    "email": "arsene@muyen.co"
+  },
+  "metadata": {
+    "description": "Production-ready skills for vibe coding workflow",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "vibe-to-prod-skills",
+      "description": "Production-ready skills including ralph-invoke (Claude-initiated autonomous loops), code-review, dev-workflow, git-workflow, security-scan, and more",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./.claude/skills/ralph-invoke",
+        "./.claude/skills/code-review",
+        "./.claude/skills/continuous-improvement",
+        "./.claude/skills/dev-workflow",
+        "./.claude/skills/git-workflow",
+        "./.claude/skills/openapi-workflow",
+        "./.claude/skills/security-scan",
+        "./.claude/skills/systematic-debugging"
+      ]
+    }
+  ]
+}
