@@ -183,7 +183,7 @@ jobs:
 
       - name: Upload build artifacts
         if: ${{ inputs.deploy && needs.changes.outputs.should_deploy == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-build-${{ github.sha }}
           path: |

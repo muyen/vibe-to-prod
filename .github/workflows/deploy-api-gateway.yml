@@ -68,7 +68,7 @@ jobs:
           swagger validate backend/api/openapi-v2.yaml
 
       - name: Upload converted spec
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openapi-v2
           path: backend/api/openapi-v2.yaml
